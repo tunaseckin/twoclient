@@ -26,7 +26,6 @@ const APP_TARGETS: &[&str] = &[
     "oneclient_java",
     "oneclient_mc",
     "oneclient_net",
-    "oneclient_polyplus",
     "polyio",
 ];
 

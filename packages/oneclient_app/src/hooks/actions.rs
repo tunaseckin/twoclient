@@ -3,9 +3,8 @@
 //! Always `spawn_forever` never `spawn` Freya's `spawn` cancels the task when
 //! the calling component unmounts this work is app-scoped not component-scoped
 
-use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use freya::prelude::spawn_forever;
@@ -33,34 +32,14 @@ use crate::state::{AppChannel, AppState, AsyncStatus, RelocationState};
 /// Over-disabling is the cheaper mistake a dead button beats a second game
 const LAUNCH_HOLD: Duration = Duration::from_secs(2);
 
-/// Mirrors `oneclient_net`'s reachability probe not reqwest's per-request
-/// timeouts which are minutes long This sits between Play and the game
-const UPDATE_CHECK_BUDGET: Duration = Duration::from_secs(8);
-const BUNDLE_CHECK_INTERVAL: Duration = Duration::from_secs(15 * 60);
-const BUNDLE_SYNC_BUDGET: Duration = Duration::from_secs(30);
-/// The downloads need one too the net stack alone retries for minutes and the
-/// launch button is already claimed by then
-const BUNDLE_APPLY_BUDGET: Duration = Duration::from_secs(60);
-
-#[derive(Debug, Default)]
-struct BundleCheckLog {
-    checked_at: HashMap<ClusterId, Instant>,
-}
-
-impl BundleCheckLog {
-    fn due(&self, cluster_id: ClusterId, now: Instant) -> bool {
-        self.checked_at
-            .get(&cluster_id)
-            .is_none_or(|last| now.duration_since(*last) >= BUNDLE_CHECK_INTERVAL)
-    }
-
-    fn record(&mut self, cluster_id: ClusterId, now: Instant) {
-        self.checked_at.insert(cluster_id, now);
-    }
-}
+/// Kept pure and separate from the work it describes so the three-way mode is
+/// testable without a launcher database or provider
+///
+/// `pending` has already had declined versions filtered out by
+/// `BrowserUpdateCheck::pending`
 
 #[derive(Debug, Clone, PartialEq)]
-enum LaunchUpdatePlan {
+enum PackageUpdatePlan {
     Nothing,
     Apply(Vec<oneclient_core::BrowserPackageUpdate>),
     Prompt(Vec<oneclient_core::BrowserPackageUpdate>),
@@ -71,19 +50,19 @@ enum LaunchUpdatePlan {
 ///
 /// `pending` has already had declined versions filtered out by
 /// `BrowserUpdateCheck::pending`
-fn plan_launch_updates(
+fn plan_package_updates(
     mode: PackageUpdateMode,
     pending: Vec<oneclient_core::BrowserPackageUpdate>,
-) -> LaunchUpdatePlan {
+) -> PackageUpdatePlan {
     if pending.is_empty() {
-        return LaunchUpdatePlan::Nothing;
+        return PackageUpdatePlan::Nothing;
     }
 
     match mode {
         // The cache was already written skipping only affects what is shown
-        PackageUpdateMode::Skip => LaunchUpdatePlan::Nothing,
-        PackageUpdateMode::Automatic => LaunchUpdatePlan::Apply(pending),
-        PackageUpdateMode::Prompt => LaunchUpdatePlan::Prompt(pending),
+        PackageUpdateMode::Skip => PackageUpdatePlan::Nothing,
+        PackageUpdateMode::Automatic => PackageUpdatePlan::Apply(pending),
+        PackageUpdateMode::Prompt => PackageUpdatePlan::Prompt(pending),
     }
 }
 
@@ -101,7 +80,6 @@ pub struct Actions {
     station: RadioStation<AppState, AppChannel>,
     pump: mpsc::UnboundedSender<PumpSignal>,
     events: oneclient_events::EventBus,
-    bundle_checks: Arc<Mutex<BundleCheckLog>>,
 }
 
 impl Actions {
@@ -126,7 +104,6 @@ impl Actions {
             station,
             pump,
             events,
-            bundle_checks: Arc::new(Mutex::new(BundleCheckLog::default())),
         }
     }
 
@@ -134,20 +111,6 @@ impl Actions {
         let _ = self.pump.send(signal);
     }
 
-    fn bundle_check_due(&self, cluster_id: ClusterId) -> bool {
-        self.bundle_checks
-            .lock()
-            .unwrap()
-            .due(cluster_id, Instant::now())
-    }
-
-    fn record_bundle_checks(&self, cluster_ids: impl IntoIterator<Item = ClusterId>) {
-        let now = Instant::now();
-        let mut log = self.bundle_checks.lock().unwrap();
-        for cluster_id in cluster_ids {
-            log.record(cluster_id, now);
-        }
-    }
 
     fn with_engine(&self, mutate: impl FnOnce(&mut AppState)) {
         {
@@ -1178,8 +1141,6 @@ impl Actions {
                 }
             };
 
-            actions.record_bundle_checks([cluster_id]);
-
             super::invalidate_cluster_queries().await;
             if let Some(spec) =
                 crate::install::cluster_update_notification(cluster_id, &result, &state.services)
@@ -1301,11 +1262,7 @@ impl Actions {
             .await;
             let session_id = session.detach();
 
-            if synced
-                && let Ok(clusters) = state.clusters.list().await
-            {
-                actions.record_bundle_checks(clusters.iter().map(|cluster| cluster.id));
-            }
+            let _ = synced;
 
             actions
                 .station
@@ -1315,6 +1272,16 @@ impl Actions {
                 .syncing_bundles = false;
             super::invalidate_cluster_queries().await;
 
+            // Individually installed packages, after the bundles and after the
+            // launch button is free again The old home for this was in front of
+            // Play where every check was time the player spent watching a
+            // spinner
+            if let Ok(clusters) = state.clusters.list().await {
+                for cluster in clusters {
+                    actions.resolve_package_updates(&state, cluster.id).await;
+                }
+            }
+
             let spec = crate::install::combined_cluster_update_spec(&changed, &state.services).await;
             actions.with_engine(|app| {
                 app.notifications
@@ -1323,148 +1290,34 @@ impl Actions {
         });
     }
 
-    async fn resolve_bundle_updates_before_launch(
-        &self,
-        state: &Arc<oneclient_core::LauncherState>,
-        cluster_id: ClusterId,
-    ) {
-        if !self.bundle_check_due(cluster_id) {
-            tracing::debug!(cluster_id, "bundle update check skipped, checked recently");
-            return;
-        }
-
-        let content = state.services.content();
-
-        if let Ok(false) = oneclient_core::cluster_has_bundle_content(cluster_id, &content).await {
-            tracing::debug!(cluster_id, "bundle update check skipped, no bundle content");
-            return;
-        }
-
-        let mode = self.cluster_update_mode(state, cluster_id).await;
-
-        self.station
-            .clone()
-            .write_channel(AppChannel::Launcher)
-            .launcher
-            .syncing_bundles = true;
-
-        let synced = match tokio::time::timeout(BUNDLE_SYNC_BUDGET, state.bundles.sync(&content))
-            .await
-        {
-            Ok(Ok(_)) => true,
-            Ok(Err(err)) => {
-                tracing::warn!(
-                    cluster_id,
-                    error = %err,
-                    "bundle catalog sync failed, launching against the cached catalog"
-                );
-                false
-            }
-            Err(_elapsed) => {
-                tracing::debug!(
-                    cluster_id,
-                    "bundle catalog sync exceeded its launch budget"
-                );
-                false
-            }
-        };
-
-        self.station
-            .clone()
-            .write_channel(AppChannel::Launcher)
-            .launcher
-            .syncing_bundles = false;
-
-        // No prompt for bundles the package manager's markers carry them instead
-        if !matches!(mode, PackageUpdateMode::Automatic) {
-            tracing::debug!(cluster_id, "bundle updates left for the user to apply");
-            if synced {
-                self.record_bundle_checks([cluster_id]);
-            }
-            return;
-        }
-
-        let applied = match tokio::time::timeout(
-            BUNDLE_APPLY_BUDGET,
-            oneclient_core::apply_bundle_updates(cluster_id, state.bundles.as_ref(), &content),
-        )
-        .await
-        {
-            Ok(applied) => applied,
-            Err(_elapsed) => {
-                tracing::warn!(
-                    cluster_id,
-                    "bundle updates exceeded their launch budget, launching anyway"
-                );
-                return;
-            }
-        };
-
-        let result = match applied {
-            Ok(result) => result,
-            Err(err) => {
-                tracing::warn!(
-                    cluster_id,
-                    error = %err,
-                    "bundle update failed, launching anyway"
-                );
-                return;
-            }
-        };
-
-        if synced {
-            self.record_bundle_checks([cluster_id]);
-        }
-
-        if result.updates_applied.is_empty()
-            && result.additions_applied.is_empty()
-            && result.removals_applied.is_empty()
-        {
-            return;
-        }
-
-        super::invalidate_cluster_queries().await;
-
-        if let Some(spec) =
-            crate::install::cluster_update_notification(cluster_id, &result, &state.services).await
-        {
-            self.push_notification(spec);
-        }
-    }
 
     /// The check runs and the cache is written whatever the mode says keeping
     /// the package manager's "Update available" markers honest
     ///
     /// Returns once the launch may proceed nothing is still downloading then
     /// Never fails the launch every error logs and lets the game start
-    async fn resolve_package_updates_before_launch(
+
+    /// The check runs and the cache is written whatever the mode says keeping
+    /// the package manager's "Update available" markers honest
+    ///
+    /// Runs from the startup sync rather than from a launch Minecraft reads its
+    /// mods once at startup so changing them under a running game is not on and
+    /// making Play wait for a provider round-trip was the old cost
+    async fn resolve_package_updates(
         &self,
         state: &Arc<oneclient_core::LauncherState>,
         cluster_id: ClusterId,
     ) {
         let content = state.services.content();
 
-        // Bounded a hanging network would otherwise hold the launch for
-        // reqwest's much longer timeouts
-        let check = match tokio::time::timeout(
-            UPDATE_CHECK_BUDGET,
-            oneclient_core::refresh_browser_package_updates(cluster_id, &content),
-        )
-        .await
+        let check = match oneclient_core::refresh_browser_package_updates(cluster_id, &content).await
         {
-            Ok(Ok(check)) => check,
-            Ok(Err(err)) => {
+            Ok(check) => check,
+            Err(err) => {
                 tracing::warn!(
                     cluster_id,
                     error = %err,
-                    "browser package update check failed, launching anyway"
-                );
-                return;
-            }
-            Err(_elapsed) => {
-                tracing::debug!(
-                    cluster_id,
-                    "browser package update check exceeded its launch budget"
+                    "browser package update check failed"
                 );
                 return;
             }
@@ -1473,12 +1326,12 @@ impl Actions {
         let pending = check.pending();
         let mode = self.cluster_update_mode(state, cluster_id).await;
 
-        match plan_launch_updates(mode, pending) {
-            LaunchUpdatePlan::Nothing => {}
-            LaunchUpdatePlan::Apply(updates) => {
-                self.apply_updates_for_launch(state, &updates).await;
+        match plan_package_updates(mode, pending) {
+            PackageUpdatePlan::Nothing => {}
+            PackageUpdatePlan::Apply(updates) => {
+                self.apply_package_updates(state, &updates).await;
             }
-            LaunchUpdatePlan::Prompt(updates) => {
+            PackageUpdatePlan::Prompt(updates) => {
                 let Some(group) =
                     crate::install::package_update_group(cluster_id, &updates, &state.services)
                         .await
@@ -1490,30 +1343,8 @@ impl Actions {
         }
     }
 
-    /// Anything unreadable falls back to the default rather than blocking the
-    /// launch on a settings lookup
-    async fn cluster_update_mode(
-        &self,
-        state: &Arc<oneclient_core::LauncherState>,
-        cluster_id: ClusterId,
-    ) -> PackageUpdateMode {
-        let global = state.settings.read().global_game_settings.clone();
-
-        let Ok(cluster) = state.clusters.get(cluster_id).await else {
-            return PackageUpdateMode::default();
-        };
-
-        state
-            .clusters
-            .resolve_settings(&global, &cluster)
-            .await
-            .ok()
-            .and_then(|profile| profile.browser_update_mode)
-            .unwrap_or_default()
-    }
-
-    /// One grouped progress notification so the pre-launch pause shows something
-    async fn apply_updates_for_launch(
+    /// One grouped progress notification so the work is visible while it runs
+    async fn apply_package_updates(
         &self,
         state: &Arc<oneclient_core::LauncherState>,
         updates: &[oneclient_core::BrowserPackageUpdate],
@@ -1539,8 +1370,7 @@ impl Actions {
             match oneclient_core::apply_browser_package_update(update, Some(&child), &content).await
             {
                 Ok(_) => applied += 1,
-                // Not a reason to hold the game back the cache row survives
-                // so the next launch offers it again
+                // The cache row survives so the next check offers it again
                 Err(err) => tracing::warn!(
                     package = %update.display_name,
                     error = %err,
@@ -1554,7 +1384,7 @@ impl Actions {
         let spec = (applied > 0).then(|| NotificationSpec {
             title: "Packages updated".to_string(),
             body: format!(
-                "{applied} package{} updated before launch",
+                "{applied} package{} updated",
                 if applied == 1 { "" } else { "s" }
             ),
             level: Level::Info,
@@ -1572,6 +1402,41 @@ impl Actions {
             super::invalidate_cluster_queries().await;
         }
     }
+
+    async fn prompt_package_updates(&self, group: PackageUpdateGroup) {
+        let (done, wait) = tokio::sync::oneshot::channel();
+
+        self.with_engine(move |state| {
+            state.notifications.open_package_updates(vec![group], Some(done));
+            state.center_open = false;
+        });
+
+        let _ = wait.await;
+    }
+
+    /// Anything unreadable falls back to the default rather than blocking the
+    /// launch on a settings lookup
+    async fn cluster_update_mode(
+        &self,
+        state: &Arc<oneclient_core::LauncherState>,
+        cluster_id: ClusterId,
+    ) -> PackageUpdateMode {
+        let global = state.settings.read().global_game_settings.clone();
+
+        let Ok(cluster) = state.clusters.get(cluster_id).await else {
+            return PackageUpdateMode::default();
+        };
+
+        state
+            .clusters
+            .resolve_settings(&global, &cluster)
+            .await
+            .ok()
+            .and_then(|profile| profile.browser_update_mode)
+            .unwrap_or_default()
+    }
+
+    /// One grouped progress notification so the pre-launch pause shows something
 
     async fn resolve_optional_mods_before_launch(
         &self,
@@ -1613,16 +1478,6 @@ impl Actions {
         let _ = wait.await;
     }
 
-    async fn prompt_package_updates(&self, group: PackageUpdateGroup) {
-        let (done, wait) = tokio::sync::oneshot::channel();
-
-        self.with_engine(move |state| {
-            state.notifications.open_package_updates(vec![group], Some(done));
-            state.center_open = false;
-        });
-
-        let _ = wait.await;
-    }
 
     pub fn apply_package_update(&self, update: oneclient_core::BrowserPackageUpdate) {
         let actions = self.clone();
@@ -1748,16 +1603,9 @@ async fn launch(actions: &Actions, cluster_id: ClusterId) {
         return;
     };
 
-    // Before the game process never after Minecraft reads its mods once at
-    // startup
-    actions
-        .resolve_bundle_updates_before_launch(&state, cluster_id)
-        .await;
-    actions
-        .resolve_package_updates_before_launch(&state, cluster_id)
-        .await;
-
-    // After the updates so the player never faces two modals at once
+    // Play starts the game and nothing else No catalog sync no update check no
+    // download the startup sync and the update buttons own that work so a
+    // launch costs only what the game itself costs
     actions
         .resolve_optional_mods_before_launch(&state, cluster_id)
         .await;
@@ -1901,93 +1749,3 @@ impl NotificationBuilder {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use oneclient_common::domain::ProviderId;
-
-    fn update(hash: &str) -> oneclient_core::BrowserPackageUpdate {
-        oneclient_core::BrowserPackageUpdate {
-            cluster_id: 1,
-            hash: hash.into(),
-            provider: ProviderId::Modrinth,
-            project_id: "sodium".into(),
-            installed_version_id: "v1".into(),
-            installed_version_name: "1.0".into(),
-            latest_version_id: "v2".into(),
-            latest_version_name: "2.0".into(),
-            display_name: "Sodium".into(),
-            skipped: false,
-        }
-    }
-
-    #[test]
-    fn skip_mode_launches_without_asking_or_installing() {
-        assert_eq!(
-            plan_launch_updates(PackageUpdateMode::Skip, vec![update("a")]),
-            LaunchUpdatePlan::Nothing,
-        );
-    }
-
-    #[test]
-    fn automatic_mode_installs_without_asking() {
-        assert_eq!(
-            plan_launch_updates(PackageUpdateMode::Automatic, vec![update("a")]),
-            LaunchUpdatePlan::Apply(vec![update("a")]),
-        );
-    }
-
-    #[test]
-    fn prompt_mode_is_the_default_and_asks() {
-        assert_eq!(
-            plan_launch_updates(PackageUpdateMode::default(), vec![update("a")]),
-            LaunchUpdatePlan::Prompt(vec![update("a")]),
-        );
-    }
-
-    #[test]
-    fn a_cluster_that_was_never_checked_is_due() {
-        assert!(BundleCheckLog::default().due(1, Instant::now()));
-    }
-
-    #[test]
-    fn a_relaunch_inside_the_window_reuses_the_last_check() {
-        let mut log = BundleCheckLog::default();
-        let now = Instant::now();
-        log.record(1, now);
-
-        assert!(!log.due(1, now));
-        assert!(!log.due(1, now + BUNDLE_CHECK_INTERVAL / 2));
-    }
-
-    #[test]
-    fn the_window_reopens_once_the_interval_has_passed() {
-        let mut log = BundleCheckLog::default();
-        let now = Instant::now();
-        log.record(1, now);
-
-        assert!(log.due(1, now + BUNDLE_CHECK_INTERVAL));
-        assert!(log.due(1, now + BUNDLE_CHECK_INTERVAL * 2));
-    }
-
-    #[test]
-    fn clusters_are_throttled_independently() {
-        let mut log = BundleCheckLog::default();
-        let now = Instant::now();
-        log.record(1, now);
-
-        assert!(!log.due(1, now));
-        assert!(log.due(2, now));
-    }
-
-    #[test]
-    fn nothing_pending_never_opens_a_modal() {
-        for mode in PackageUpdateMode::ALL.iter().copied() {
-            assert_eq!(
-                plan_launch_updates(mode, Vec::new()),
-                LaunchUpdatePlan::Nothing,
-                "{mode:?} must not hold a launch up over an empty list",
-            );
-        }
-    }
-}

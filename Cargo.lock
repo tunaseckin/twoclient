@@ -4491,7 +4491,6 @@ dependencies = [
  "oneclient_macro",
  "oneclient_mc",
  "oneclient_net",
- "oneclient_polyplus",
  "open",
  "percent-encoding",
  "polyio",
@@ -4630,7 +4629,6 @@ dependencies = [
  "oneclient_java",
  "oneclient_mc",
  "oneclient_net",
- "oneclient_polyplus",
  "parking_lot",
  "polyio",
  "rand 0.10.1",
@@ -4765,29 +4763,6 @@ dependencies = [
  "reqwest 0.13.3",
  "serde",
  "serde_json",
- "thiserror 2.0.18",
- "tokio",
- "tracing",
- "url",
- "uuid 1.23.1",
-]
-
-[[package]]
-name = "oneclient_polyplus"
-version = "2.3.1"
-dependencies = [
- "async-tungstenite",
- "bytes 1.11.1",
- "futures-util",
- "oneclient_auth",
- "oneclient_common",
- "polyio",
- "rand 0.10.1",
- "reqwest 0.13.3",
- "reqwest-websocket",
- "serde",
- "serde_json",
- "sha1 0.10.6",
  "thiserror 2.0.18",
  "tokio",
  "tracing",

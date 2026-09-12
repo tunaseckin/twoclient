@@ -34,7 +34,6 @@ oneclient_events.workspace = true
 oneclient_java.workspace = true
 oneclient_mc.workspace = true
 oneclient_net.workspace = true
-oneclient_polyplus.workspace = true
 polyio.workspace = true
 
 # logging

@@ -12,6 +12,12 @@ pub enum CrashDiagnosis {
         /// something to depend on
         file: Option<String>,
     },
+    /// Minecraft's own shutdown watchdog gave up waiting for the game to close
+    /// and turned a slow shutdown into a crash report
+    ///
+    /// Nothing is damaged the game simply had more to unwind than the watchdog
+    /// allows which is what a large mod set costs on the way out
+    ShutdownTimeout,
 }
 
 impl CrashDiagnosis {
@@ -26,7 +32,21 @@ impl CrashDiagnosis {
                  library or mod files - it is damaged. Verifying will re-download \
                  anything that does not match."
                 .to_string(),
+            Self::ShutdownTimeout => "The game was still shutting down when Minecraft's \
+                 watchdog stopped waiting, so it force-closed itself. Nothing is \
+                 damaged. Fewer mods shorten the shutdown."
+                .to_string(),
         }
+    }
+
+    /// Whether re-downloading the game's files could plausibly fix this
+    ///
+    /// Gates the repair offer verification is expensive and re-downloads much
+    /// of the game so offering it for something it cannot fix is worse than
+    /// saying nothing
+    #[must_use]
+    pub fn repairable(&self) -> bool {
+        matches!(self, Self::CorruptArchive { .. })
     }
 }
 
@@ -39,20 +59,34 @@ const CORRUPT_ARCHIVE_MARKERS: [&str; 4] = [
     "zip END header not found",
 ];
 
+/// Minecraft writes both of these while the watchdog is turning a slow close
+/// into a crash report the class name also appears in the stack trace it saves
+const SHUTDOWN_WATCHDOG_MARKERS: [&str; 2] = [
+    "ClientShutdownWatchdog",
+    "Client watchdog shutdown details",
+];
+
 /// Runs against every line the game prints so it stays substring scans rather
 /// than anything that parses the line
 #[must_use]
 pub fn diagnose(line: &str) -> Option<CrashDiagnosis> {
-    if !CORRUPT_ARCHIVE_MARKERS
+    if CORRUPT_ARCHIVE_MARKERS
         .iter()
         .any(|marker| line.contains(marker))
     {
-        return None;
+        return Some(CrashDiagnosis::CorruptArchive {
+            file: jar_in(line),
+        });
     }
 
-    Some(CrashDiagnosis::CorruptArchive {
-        file: jar_in(line),
-    })
+    if SHUTDOWN_WATCHDOG_MARKERS
+        .iter()
+        .any(|marker| line.contains(marker))
+    {
+        return Some(CrashDiagnosis::ShutdownTimeout);
+    }
+
+    None
 }
 
 /// Opportunistic some JVMs omit the path entirely and a missing name still
@@ -110,6 +144,37 @@ impl CrashWatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_shutdown_watchdog_is_recognised() {
+        let line = "\tat knot//com.mojang.blaze3d.platform.ClientShutdownWatchdog\
+                    .lambda$startShutdownWatchdog$0(ClientShutdownWatchdog.java:44)";
+
+        assert_eq!(diagnose(line), Some(CrashDiagnosis::ShutdownTimeout));
+        assert_eq!(
+            diagnose("-- Client watchdog shutdown details --"),
+            Some(CrashDiagnosis::ShutdownTimeout)
+        );
+    }
+
+    #[test]
+    fn a_slow_shutdown_is_not_offered_a_repair() {
+        assert!(!CrashDiagnosis::ShutdownTimeout.repairable());
+        assert!(CrashDiagnosis::CorruptArchive { file: None }.repairable());
+    }
+
+    /// A watchdog report carries the whole thread dump, so a damaged jar
+    /// mentioned anywhere in it still has to win over the slow close
+    #[test]
+    fn damage_outranks_a_slow_shutdown() {
+        let line = "ClientShutdownWatchdog saw java.util.zip.ZipException: bad.jar";
+        assert_eq!(
+            diagnose(line),
+            Some(CrashDiagnosis::CorruptArchive {
+                file: Some("bad.jar".to_string()),
+            })
+        );
+    }
 
     #[test]
     fn a_zip_exception_is_recognised() {
