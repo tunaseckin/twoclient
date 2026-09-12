@@ -1092,6 +1092,21 @@ fn assets_tree_missing(index: &Path, objects: &Path) -> bool {
 /// this turns a deleted assets tree into an automatic repair
 /// Coarse checks only per-object verification belongs to `download_minecraft`'s plan
 #[tracing::instrument(skip(version_info), level = "debug")]
+/// Stats every library and spot-checks the asset tree, so it belongs on the
+/// blocking pool the same way [`plan_downloads`] does
+///
+/// Run straight from an async task it holds a runtime thread for the whole
+/// sweep, which is the launch's own thread
+/// `block_in_place` rather than `spawn_blocking` because `VersionInfo` is not
+/// `Clone` and the sweep only reads it
+pub async fn game_files_missing_async(
+    version_info: &VersionInfo,
+    java_arch: &str,
+    minecraft_updated: bool,
+) -> McResult<bool> {
+    tokio::task::block_in_place(|| game_files_missing(version_info, java_arch, minecraft_updated))
+}
+
 pub fn game_files_missing(
     version_info: &VersionInfo,
     java_arch: &str,

@@ -39,6 +39,11 @@ impl Component for SettingsLauncher {
             move || v
         });
 
+        let parallel = use_state({
+            let v = settings.allow_parallel_running_clusters;
+            move || v
+        });
+
         let mut first = use_state(|| true);
         {
             let settings = settings.clone();
@@ -46,6 +51,7 @@ impl Component for SettingsLauncher {
                 let discord = *discord_rpc.read();
                 let crash = *crash_reporting.read();
                 let maximized = *start_maximized.read();
+                let parallel = *parallel.read();
                 if *first.peek() {
                     first.set(false);
                     return;
@@ -54,6 +60,7 @@ impl Component for SettingsLauncher {
                 next.discord_enabled = discord;
                 next.crash_reporting = crash;
                 next.start_maximized = maximized;
+                next.allow_parallel_running_clusters = parallel;
                 dispatch.set_settings(next);
             });
         }
@@ -85,6 +92,13 @@ impl Component for SettingsLauncher {
                 "Crash Reporting",
                 "Send anonymous crash and error reports to help fix bugs. Applies on restart.",
                 toggle(crash_reporting),
+            ))
+            .child(settings_row(
+                IconType::Copy01,
+                "Run Instances In Parallel",
+                "Start an instance while it is already running. Instances that share the \
+                 game folder still take turns.",
+                toggle(parallel),
             ))
             .child(settings_row(
                 IconType::Maximize01,
