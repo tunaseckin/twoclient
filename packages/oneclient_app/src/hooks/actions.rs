@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use freya::prelude::spawn_forever;
+use freya::prelude::{State, spawn_forever};
 use freya::radio::RadioStation;
 use oneclient_cluster::{
     ClusterStage, ClusterUpdate, GameSettingsProfile, PackageUpdateMode, ProfileUpdate,
@@ -1150,6 +1150,66 @@ impl Actions {
                 // this path only reports what changed
                 actions.push_notification(spec);
             }
+        });
+    }
+
+    /// Creates an instance and makes it the active one
+    ///
+    /// The files it needs are left to the first launch to fetch: creating is
+    /// a database row and a folder, and making the user watch a download to
+    /// find out whether the name took is the wrong trade
+    ///
+    /// `active` is the root-context selection, which outlives whatever dialog
+    /// asked for the instance
+    pub fn create_cluster(
+        &self,
+        options: oneclient_core::CreateClusterOptions,
+        dedicated: bool,
+        mut active: State<Option<ClusterId>>,
+    ) {
+        spawn_forever(async move {
+            let Ok(state) = launcher::state() else { return };
+            let global = state.settings.read().global_game_settings.clone();
+
+            let cluster = match state.clusters.create(&global, options).await {
+                Ok(cluster) => cluster,
+                Err(err) => {
+                    state
+                        .services
+                        .events
+                        .notify("Could not create the instance")
+                        .body(err.to_string())
+                        .error()
+                        .send();
+                    return;
+                }
+            };
+
+            // A shared game folder is the launcher's default, which suits the
+            // version cards Somebody who names an instance means a separate one
+            if dedicated
+                && let Err(err) = state
+                    .clusters
+                    .set_dedicated_dir(cluster.id, true, false)
+                    .await
+            {
+                tracing::warn!(
+                    cluster_id = cluster.id,
+                    error = %err,
+                    "instance created, but it will share the game folder"
+                );
+            }
+
+            super::invalidate_cluster_queries().await;
+
+            state
+                .services
+                .events
+                .notify("Instance created")
+                .body(format!("{} is ready to launch", cluster.name))
+                .send();
+
+            *active.write() = Some(cluster.id);
         });
     }
 

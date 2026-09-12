@@ -44,13 +44,18 @@ pub use clusters::{
     ensure_from_bundles, ensure_from_versions, estimate_cluster_download,
 };
 pub use error::{LauncherError, LauncherResult, SentryExclusion};
-pub use game::{GameError, LaunchedGame, get_loader_versions, launch_cluster};
+pub use game::{
+    GameError, LaunchedGame, get_game_versions, get_loader_versions, get_loaders_for_version,
+    launch_cluster,
+};
 pub use images::ImageCacheStore;
 pub use oneclient_cluster::logs::{
     LogFileInfo, LogKind, LogLevel, LogLine, LogsError, MclogsUploadResponse, ReadOptions,
     delete_log_at, list_cluster_logs, read_log_at, upload_log_at,
 };
 pub use oneclient_mc::{McError as MetadataError, MetadataStore};
+/// Re-exported so callers can name a version without depending on interfrost
+pub use interfrost::api::minecraft::{Version as GameVersion, VersionType};
 pub use migration::{
     detect as detect_migration, import_game_dir as import_migration_game_dir, ImportTarget,
     MigrationDetection, MigrationSource, SourceInstance,

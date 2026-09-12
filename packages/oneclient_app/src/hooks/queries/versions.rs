@@ -79,3 +79,78 @@ pub fn use_loader_versions(
 pub fn loader_versions(query: &UseQuery<LoaderVersionsQuery>) -> Vec<String> {
     super::state::settled_or_loading(query).unwrap_or_default()
 }
+
+/// Every version Mojang publishes, newest first
+///
+/// Distinct from [`use_versions`], which is the curated list the version cards
+/// are built from: creating an instance is not limited to the versions someone
+/// wrote cover art for
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct GameVersionsQuery;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct GameVersionsKeys;
+
+impl QueryCapability for GameVersionsQuery {
+    type Ok = Vec<oneclient_core::GameVersion>;
+    type Err = LauncherError;
+    type Keys = GameVersionsKeys;
+
+    async fn run(&self, _keys: &Self::Keys) -> Result<Self::Ok, Self::Err> {
+        let state = crate::launcher::state()?;
+        let mut metadata = state.metadata.lock().await;
+        Ok(oneclient_core::get_game_versions(&mut metadata, &state.services.mc()).await?)
+    }
+}
+
+pub fn use_game_versions() -> UseQuery<GameVersionsQuery> {
+    use_query(Query::new(GameVersionsKeys, GameVersionsQuery))
+}
+
+pub fn game_versions(
+    query: &UseQuery<GameVersionsQuery>,
+) -> Vec<oneclient_core::GameVersion> {
+    super::state::settled_or_loading(query).unwrap_or_default()
+}
+
+/// Which loaders have a build for one Minecraft version
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct LoadersForVersionQuery;
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LoadersForVersionKeys {
+    pub mc_version: String,
+}
+
+impl QueryCapability for LoadersForVersionQuery {
+    type Ok = Vec<GameLoader>;
+    type Err = LauncherError;
+    type Keys = LoadersForVersionKeys;
+
+    async fn run(&self, keys: &Self::Keys) -> Result<Self::Ok, Self::Err> {
+        let state = crate::launcher::state()?;
+        let mut metadata = state.metadata.lock().await;
+        Ok(oneclient_core::get_loaders_for_version(
+            &mut metadata,
+            &state.services.mc(),
+            &keys.mc_version,
+        )
+        .await?)
+    }
+}
+
+pub fn use_loaders_for_version(mc_version: String) -> UseQuery<LoadersForVersionQuery> {
+    use_query(Query::new(
+        LoadersForVersionKeys { mc_version },
+        LoadersForVersionQuery,
+    ))
+}
+
+/// Vanilla is always offered: it needs no loader build to exist
+pub fn loaders_for_version(query: &UseQuery<LoadersForVersionQuery>) -> Vec<GameLoader> {
+    let mut loaders = super::state::settled_or_loading(query).unwrap_or_default();
+    if !loaders.contains(&GameLoader::Vanilla) {
+        loaders.insert(0, GameLoader::Vanilla);
+    }
+    loaders
+}
