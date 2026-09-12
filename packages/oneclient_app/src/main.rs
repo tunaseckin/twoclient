@@ -105,6 +105,12 @@ impl App for OneClientApp {
 fn main() {
     let cli = cli::parse();
 
+    // Before anything reads a path: the settings file, the database and the
+    // single-instance endpoint are all resolved from this root
+    if let Some(dir) = cli.launcher_dir.as_deref() {
+        oneclient_common::paths::set_launcher_dir(std::path::PathBuf::from(dir));
+    }
+
     let mut builder = Builder::new_multi_thread();
     builder.enable_all().max_blocking_threads(64);
 

@@ -5,7 +5,8 @@ use oneclient_core::clusters::Cluster;
 use oneclient_common::domain::GameLoader;
 
 use crate::components::{
-    Button, ClusterLandscapeArt, Dropdown, Icon, IconType, ScrollArea, VersionCard,
+    Button, ClusterLandscapeArt, CreateClusterPopup, Dropdown, Icon, IconType, ScrollArea,
+    VersionCard,
 };
 use crate::hooks::{settled_or_loading, use_active_cluster_id, use_clusters, use_dispatch, use_game_snapshot, use_launcher, use_version_metadata};
 use crate::routes::Route;
@@ -34,6 +35,7 @@ impl Component for Clusters {
         let mut selected_version = use_state(|| None::<VersionKey>);
         let mut selected_loader = use_state(|| None::<GameLoader>);
         let mut grid_columns = use_state(|| 2_usize);
+        let mut creating = use_state(|| false);
 
         let clusters = settled_or_loading(&clusters_query).unwrap_or_default();
 
@@ -49,7 +51,7 @@ impl Component for Clusters {
                 .overflow(Overflow::Clip)
                 .padding(40.)
                 .spacing(24.)
-                .child(page_header())
+                .child(page_header(EventHandler::new(move |()| creating.set(true))))
                 .child(
                     rect()
                         .vertical()
@@ -57,11 +59,20 @@ impl Component for Clusters {
                         .main_align(Alignment::Center)
                         .child(
                             label()
-                                .text("No versions available yet. Bundles are still syncing.")
+                                .text(
+                                    "No versions available yet. Bundles are still syncing - \
+                                     or make an instance yourself.",
+                                )
                                 .font_size(16.)
                                 .color(colors::fg_secondary()),
                         ),
-                );
+                )
+                .maybe_child(creating().then(|| {
+                    CreateClusterPopup {
+                        on_close: EventHandler::new(move |()| creating.set(false)),
+                    }
+                    .into_element()
+                }));
         }
 
         let active_cluster = active_id
@@ -112,7 +123,7 @@ impl Component for Clusters {
             .overflow(Overflow::Clip)
             .padding(Gaps::new(0., 40., 40., 40.))
             .spacing(16.)
-            .child(page_header())
+            .child(page_header(EventHandler::new(move |()| creating.set(true))))
             .child(
                 rect()
                     .horizontal()
@@ -182,6 +193,12 @@ impl Component for Clusters {
                         None => sidebar_error(),
                     }),
             )
+            .maybe_child(creating().then(|| {
+                CreateClusterPopup {
+                    on_close: EventHandler::new(move |()| creating.set(false)),
+                }
+                .into_element()
+            }))
     }
 }
 
@@ -421,27 +438,39 @@ fn view_button(cluster_id: i64, mut active_id: State<Option<i64>>) -> impl IntoE
         .child(Icon::new(IconType::ArrowRight).size(14.))
 }
 
-fn page_header() -> impl IntoElement {
+fn page_header(on_new: EventHandler<()>) -> impl IntoElement {
     rect()
-        .vertical()
-        .spacing(6.)
+        .horizontal()
+        .width(Size::fill())
+        .cross_align(Alignment::Center)
         .child(
-            label()
-                .text("Versions")
-                .font_size(36.)
-                .font_weight(FontWeight::BOLD)
-                .color(colors::fg_primary()),
+            rect()
+                .vertical()
+                .width(Size::flex(1.0))
+                .spacing(6.)
+                .child(
+                    label()
+                        .text("Versions")
+                        .font_size(36.)
+                        .font_weight(FontWeight::BOLD)
+                        .color(colors::fg_primary()),
+                )
+                .child(
+                    label()
+                        .text(
+                            "Pick a version to play, or make an instance of your own on any \
+                             version and loader.",
+                        )
+                        .font_size(12.)
+                        .font_weight(FontWeight::MEDIUM)
+                        .color(colors::fg_secondary()),
+                ),
         )
         .child(
-            label()
-                .text(
-                    "Something something in corporate style fashion about picking your \
-                     preferred gamemodes and versions and optionally loader so that oneclient \
-                     can pick something for them",
-                )
-                .font_size(12.)
-                .font_weight(FontWeight::MEDIUM)
-                .color(colors::fg_secondary()),
+            Button::new()
+                .primary()
+                .text("New instance")
+                .on_press(move |_| on_new.call(())),
         )
 }
 

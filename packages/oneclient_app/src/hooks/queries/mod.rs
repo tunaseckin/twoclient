@@ -99,4 +99,7 @@ pub use skin::use_player_skin;
 pub use state::{query_error, query_is_busy, query_is_loading, settled_or_loading};
 pub use tos::{TermsQuery, terms_document, terms_error, terms_is_loading, use_terms};
 pub use version_metadata::{pick_version_metadata, use_version_metadata};
-pub use versions::{loader_versions, use_loader_versions, use_versions, versions_metadata};
+pub use versions::{
+    game_versions, loader_versions, loaders_for_version, use_game_versions,
+    use_loader_versions, use_loaders_for_version, use_versions, versions_metadata,
+};

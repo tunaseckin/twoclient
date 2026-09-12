@@ -1,6 +1,12 @@
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Cli {
     pub launch: Option<String>,
+    /// Everything the launcher stores, rooted somewhere else
+    ///
+    /// A second launcher against a throwaway folder, so trying a build costs
+    /// nothing: the single-instance endpoint lives under this directory too, so
+    /// it neither forwards to nor blocks an installed launcher
+    pub launcher_dir: Option<String>,
 }
 
 impl Cli {
@@ -9,7 +15,11 @@ impl Cli {
         let mut args = args.into_iter();
 
         while let Some(arg) = args.next() {
-            if let Some(value) = arg.strip_prefix("--launch=") {
+            if let Some(value) = arg.strip_prefix("--launcher-dir=") {
+                cli.launcher_dir = non_empty(value.to_string());
+            } else if arg == "--launcher-dir" {
+                cli.launcher_dir = args.next().and_then(non_empty);
+            } else if let Some(value) = arg.strip_prefix("--launch=") {
                 cli.launch = non_empty(value.to_string());
             } else if arg == "--launch" {
                 cli.launch = args.next().and_then(non_empty);
