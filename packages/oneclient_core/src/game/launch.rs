@@ -16,7 +16,7 @@ use crate::game::tail::spawn_log_tail;
 use crate::game::GameError;
 use oneclient_mc::{
     self as arguments, download_minecraft, download_version_info, get_loader_version,
-    game_files_missing, resolve_minecraft_version,
+    game_files_missing_async, resolve_minecraft_version,
 };
 use oneclient_events::{GroupedProgressSession, LaunchStage};
 use crate::settings::GameSettingsProfile;
@@ -212,7 +212,7 @@ async fn start(
         state.java.prepare(major, search_for_java, false, None).await?
     };
 
-    match game_files_missing(&version_info, &java.os_arch, updated) {
+    match game_files_missing_async(&version_info, &java.os_arch, updated).await {
         Ok(true) => {
             tracing::info!(cluster_id, "missing game files; repairing");
             let _ = state.clusters.set_stage(cluster_id, ClusterStage::Repairing).await;

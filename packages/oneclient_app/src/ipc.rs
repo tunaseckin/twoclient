@@ -313,7 +313,10 @@ mod tests {
     fn a_bare_start_asks_only_for_the_window() {
         assert_eq!(request_for(&Cli::default()), IpcCommand::Focus);
         assert_eq!(
-            request_for(&Cli { launch: Some("pack".into()) }),
+            request_for(&Cli {
+                launch: Some("pack".into()),
+                ..Cli::default()
+            }),
             IpcCommand::Launch("pack".into()),
         );
     }

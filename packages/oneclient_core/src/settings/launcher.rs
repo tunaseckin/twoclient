@@ -81,7 +81,9 @@ impl Default for LauncherSettings {
 			settings_version: 1,
 			log_debug: false,
 			auto_update: true,
-			crash_reporting: true,
+			// Off until asked for: a launcher that reports on its own is a
+			// thing to opt into, not out of
+			crash_reporting: false,
 			discord_enabled: true,
 			enable_gamemode: false,
 			use_discrete_gpu: false,
