@@ -305,7 +305,6 @@ pub async fn start_launcher(
     let state = crate::launcher::install(oneclient_core::LauncherState::new(events).await?);
 
     oneclient_net::status::start(state.services.requester.clone());
-    oneclient_polyplus::start(std::sync::Arc::clone(&state.auth));
     oneclient_core::run_startup_tasks(&state);
 
     let data_dir = oneclient_common::paths::data_dir()

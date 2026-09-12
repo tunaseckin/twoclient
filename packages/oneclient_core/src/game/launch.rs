@@ -415,17 +415,21 @@ async fn start(
     let post_hook = profile.hook_post.clone();
     tokio::spawn(async move {
         let cluster = cluster;
+        let mut stopped_by_user = false;
         let status = tokio::select! {
             status = child.wait() => status,
             _ = kill_rx => {
-                let _ = child.start_kill();
-                child.wait().await
+                stopped_by_user = true;
+                stop_child(&mut child).await
             }
         };
 
         tail.stop().await;
 
         let outcome = match status {
+            // Asked for it, so however the game went down is the expected
+            // ending and not something to report as a crash
+            Ok(_) if stopped_by_user => Exit::Stopped,
             Ok(status) => Exit::Observed {
                 code: status.code().map(i64::from),
                 success: status.success(),
@@ -463,6 +467,36 @@ async fn running_cluster_name(state: &Arc<LauncherState>, cluster_id: i64) -> St
         .map_or_else(|_| format!("Cluster {cluster_id}"), |cluster| cluster.name)
 }
 
+/// What the game gets to save and shut down in before it is killed outright
+///
+/// Minecraft's own shutdown watchdog gives up well inside this, so reaching the
+/// kill means the game was never going to close on its own
+const GRACEFUL_STOP_TIMEOUT: Duration = Duration::from_secs(30);
+
+/// Asks the game to close before killing it
+///
+/// `start_kill` is SIGKILL: the game gets no chance to save, and the exit looks
+/// like a crash to everything downstream. A terminate runs its shutdown hooks,
+/// so the kill is only the fallback for a game that will not go.
+async fn stop_child(
+    child: &mut tokio::process::Child,
+) -> std::io::Result<std::process::ExitStatus> {
+    if let Some(pid) = child.id()
+        && crate::game::kill_process(pid)
+    {
+        match tokio::time::timeout(GRACEFUL_STOP_TIMEOUT, child.wait()).await {
+            Ok(status) => return status,
+            Err(_elapsed) => tracing::warn!(
+                pid,
+                "game ignored the request to close; killing it"
+            ),
+        }
+    }
+
+    let _ = child.start_kill();
+    child.wait().await
+}
+
 /// Cuts the game loose from the launcher's process group/console so signals
 /// aimed at the launcher (Ctrl-C console close) don't reach the game
 fn detach(command: &mut Command) {
@@ -490,6 +524,8 @@ pub(crate) enum Exit {
         display: String,
     },
     Failed(String),
+    /// The user asked the launcher to close the game
+    Stopped,
     /// Game exited while the launcher was closed time recovered from the log
     /// exit code unrecoverable
     Inferred,
@@ -541,7 +577,7 @@ pub(crate) async fn finalize_session(
     if let Some(recorder) = recorder {
         let code = match &end.outcome {
             Exit::Observed { code, .. } => *code,
-            Exit::Failed(_) | Exit::Inferred => None,
+            Exit::Failed(_) | Exit::Stopped | Exit::Inferred => None,
         };
         recorder.finish_at(&end.ended_at.to_rfc3339(), code).await;
     }
@@ -560,13 +596,33 @@ pub(crate) async fn finalize_session(
     }
 
     let name = &cluster.name;
-    let crashed = !matches!(end.outcome, Exit::Observed { success: true, .. });
+    let crashed = !matches!(
+        end.outcome,
+        Exit::Observed { success: true, .. } | Exit::Stopped
+    );
+
+    // Minecraft force-closing itself over a slow shutdown exits like a crash but
+    // is one only in the exit code nothing is wrong and nothing needs repairing
+    let slow_close = matches!(
+        end.diagnosis,
+        Some(crate::game::diagnosis::CrashDiagnosis::ShutdownTimeout)
+    );
 
     match end.outcome {
         Exit::Observed { success: true, .. } => state
             .services
             .events
             .notify("Game closed").body(format!("{name} exited")).send(),
+        Exit::Stopped => state
+            .services
+            .events
+            .notify("Game closed").body(format!("{name} was closed")).send(),
+        Exit::Observed { .. } if slow_close => state
+            .services
+            .events
+            .notify("Game closed")
+            .body(format!("{name} took too long to shut down and force-closed itself"))
+            .send(),
         Exit::Observed { display, .. } => state
             .services
             .events
@@ -580,8 +636,12 @@ pub(crate) async fn finalize_session(
     }
 
     // Only when the game actually died a `ZipException` it recovered from is not
-    // worth interrupting a finished session over
-    if crashed && let Some(diagnosis) = end.diagnosis {
+    // worth interrupting a finished session over and neither is a diagnosis
+    // whose remedy is not a repair
+    if crashed
+        && let Some(diagnosis) = end.diagnosis
+        && diagnosis.repairable()
+    {
         offer_repair(state, cluster_id, &diagnosis).await;
     }
 }

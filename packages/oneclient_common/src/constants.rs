@@ -17,7 +17,6 @@ pub const SKYCLIENT_BASE_URL: &str =
 pub const META_URL_BASE: &str = "https://data-v2.polyfrost.org";
 pub const TOS_URL: &str = "https://polyfrost.org/legal/terms";
 pub const PRIVACY_URL: &str = "https://polyfrost.org/legal/privacy";
-pub const PLUS_BACKEND_URL: &str = "https://plus.polyfrost.org";
 
 pub const SENTRY_DSN: &str = match option_env!("ONECLIENT_SENTRY_DSN") {
 	Some(dsn) => dsn,
