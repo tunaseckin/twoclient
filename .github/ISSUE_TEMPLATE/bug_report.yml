@@ -18,8 +18,8 @@ body:
       multiple: true
       options:
         - Core
-        - OneClient
-        - OneLauncher
+        - TwoClient
+        - TwoLauncher
   - type: textarea
     attributes:
       label: Describe the bug

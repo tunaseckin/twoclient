@@ -9,28 +9,28 @@ authors = [
   "Polyfrost",
   "Polyfrost Contributors",
 ]
-documentation = "https://github.com/Polyfrost/OneLauncher"
+documentation = "https://github.com/Polyfrost/TwoLauncher"
 edition = "2024"
-homepage = "https://polyfrost.org/projects/oneclient"
+homepage = "https://polyfrost.org/projects/twoclient"
 license = "GPL-3.0-only"
 readme = "README.md"
-repository = "https://github.com/Polyfrost/OneLauncher"
+repository = "https://github.com/Polyfrost/TwoLauncher"
 version = "2.3.1"
 
 [workspace.dependencies]
 # core
-oneclient_auth = {path = "./packages/oneclient_auth"}
-oneclient_cluster = {path = "./packages/oneclient_cluster"}
-oneclient_common = {path = "./packages/oneclient_common"}
-oneclient_content = {path = "./packages/oneclient_content"}
-oneclient_core = {path = "./packages/oneclient_core"}
-oneclient_db = {path = "./packages/oneclient_db"}
-oneclient_discord = {path = "./packages/oneclient_discord"}
-oneclient_events = {path = "./packages/oneclient_events"}
-oneclient_java = {path = "./packages/oneclient_java"}
-oneclient_macro = {path = "./packages/oneclient_macro"}
-oneclient_mc = {path = "./packages/oneclient_mc"}
-oneclient_net = {path = "./packages/oneclient_net"}
+twoclient_auth = {path = "./packages/twoclient_auth"}
+twoclient_cluster = {path = "./packages/twoclient_cluster"}
+twoclient_common = {path = "./packages/twoclient_common"}
+twoclient_content = {path = "./packages/twoclient_content"}
+twoclient_core = {path = "./packages/twoclient_core"}
+twoclient_db = {path = "./packages/twoclient_db"}
+twoclient_discord = {path = "./packages/twoclient_discord"}
+twoclient_events = {path = "./packages/twoclient_events"}
+twoclient_java = {path = "./packages/twoclient_java"}
+twoclient_macro = {path = "./packages/twoclient_macro"}
+twoclient_mc = {path = "./packages/twoclient_mc"}
+twoclient_net = {path = "./packages/twoclient_net"}
 polyio = {path = "./packages/polyio"}
 
 # core (extra)

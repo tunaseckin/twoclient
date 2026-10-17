@@ -1,6 +1,6 @@
 /target
 .DS_Store
 /.idea
-OneLauncher.iml
+TwoLauncher.iml
 
-/packages/oneclient_app/icons/generated/
+/packages/twoclient_app/icons/generated/
