@@ -1,3 +1,4 @@
+pub mod oneclient;
 pub mod oneclient_v1;
 pub mod vanilla;
 
@@ -10,16 +11,23 @@ use twoclient_common::domain::GameLoader;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum MigrationSource {
+    /// The launcher this one was forked from
+    OneClient,
     OneClientV1,
     Vanilla,
 }
 
 impl MigrationSource {
     pub const ALL: &'static [MigrationSource] =
-        &[MigrationSource::OneClientV1, MigrationSource::Vanilla];
+        &[
+            MigrationSource::OneClient,
+            MigrationSource::OneClientV1,
+            MigrationSource::Vanilla,
+        ];
 
     pub fn id(self) -> &'static str {
         match self {
+            MigrationSource::OneClient => "oneclient",
             MigrationSource::OneClientV1 => "oneclient_v1",
             MigrationSource::Vanilla => "vanilla",
         }
@@ -27,7 +35,8 @@ impl MigrationSource {
 
     pub fn display_name(self) -> &'static str {
         match self {
-            MigrationSource::OneClientV1 => "OneClient",
+            MigrationSource::OneClient => "OneClient",
+            MigrationSource::OneClientV1 => "OneClient (older)",
             MigrationSource::Vanilla => "Minecraft",
         }
     }
@@ -79,6 +88,7 @@ pub enum ImportTarget {
 pub async fn detect() -> LauncherResult<Option<MigrationDetection>> {
     for source in MigrationSource::ALL.iter().copied() {
         let detection = match source {
+            MigrationSource::OneClient => oneclient::detect().await?,
             MigrationSource::OneClientV1 => oneclient_v1::detect().await?,
             MigrationSource::Vanilla => vanilla::detect().await?,
         };
@@ -100,6 +110,9 @@ pub async fn import_game_dir(
     target: ImportTarget,
 ) -> LauncherResult<()> {
     match source {
+        MigrationSource::OneClient => {
+            oneclient::import_game_dir(state, folder_name, target).await
+        }
         MigrationSource::OneClientV1 => {
             oneclient_v1::import_game_dir(state, folder_name, target).await
         }
