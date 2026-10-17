@@ -1433,13 +1433,6 @@ impl Actions {
         });
     }
 
-
-    /// The check runs and the cache is written whatever the mode says keeping
-    /// the package manager's "Update available" markers honest
-    ///
-    /// Returns once the launch may proceed nothing is still downloading then
-    /// Never fails the launch every error logs and lets the game start
-
     /// The check runs and the cache is written whatever the mode says keeping
     /// the package manager's "Update available" markers honest
     ///
@@ -1578,8 +1571,6 @@ impl Actions {
             .and_then(|profile| profile.browser_update_mode)
             .unwrap_or_default()
     }
-
-    /// One grouped progress notification so the pre-launch pause shows something
 
     async fn resolve_optional_mods_before_launch(
         &self,
