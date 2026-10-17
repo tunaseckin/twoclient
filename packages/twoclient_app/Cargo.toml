@@ -76,12 +76,12 @@ winresource = "=0.1.31"
 
 [package.metadata.packager]
 product-name = "TwoClient"
-identifier = "org.polyfrost.TwoClient"
+identifier = "io.github.tunaseckin.TwoClient"
 category = "Game"
-publisher = "Polyfrost Inc."
-copyright = "© 2026 Polyfrost Inc."
-homepage = "https://polyfrost.org/projects/twoclient"
-long-description = "Next-generation open source Minecraft launcher"
+publisher = "tunaseckin"
+copyright = "GPL-3.0. A fork of OneClient by Polyfrost."
+homepage = "https://github.com/tunaseckin/twoclient"
+long-description = "A Minecraft launcher. A fork of OneClient by Polyfrost, cut down and sped up."
 formats = ["nsis", "app", "dmg", "deb", "appimage"]
 binaries = [{ path = "twoclient_app", main = true }]
 icons = [
@@ -145,7 +145,7 @@ SectionEnd
 """
 
 [package.metadata.packager.deb]
-desktop-template = "distribution/linux/org.polyfrost.twoclient.template"
+desktop-template = "distribution/linux/io.github.tunaseckin.twoclient.template"
 
 [package.metadata.packager.appimage]
 # desktop entry generated from the deb template above via the linux config
