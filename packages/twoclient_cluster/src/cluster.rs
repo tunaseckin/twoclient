@@ -13,7 +13,7 @@ use crate::error::ClusterResult;
 use crate::error::ClusterError;
 use crate::stage::ClusterStage;
 
-pub use twoclient_common::paths::DEDICATED_MARKER;
+pub use twoclient_common::paths::{CATALOG_OPT_OUT_MARKER, DEDICATED_MARKER};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Cluster {
@@ -80,6 +80,15 @@ impl Cluster {
 
 	pub fn dedicated_marker(&self) -> ClusterResult<PathBuf> {
 		Ok(self.dir()?.join(DEDICATED_MARKER))
+	}
+
+	pub fn catalog_marker(&self) -> ClusterResult<PathBuf> {
+		Ok(self.dir()?.join(CATALOG_OPT_OUT_MARKER))
+	}
+
+	/// Whether the bundle catalog may add mods to this instance on its own
+	pub fn follows_catalog(&self) -> bool {
+		paths::cluster_follows_catalog(&self.folder_name)
 	}
 
 	pub fn uses_dedicated_dir(&self) -> bool {

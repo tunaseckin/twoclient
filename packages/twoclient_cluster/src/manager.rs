@@ -219,6 +219,30 @@ impl ClusterManager {
 		Ok(())
 	}
 
+	/// Whether the bundle catalog may add mods to this instance on its own
+	///
+	/// Turning it off leaves whatever is already installed alone; it only stops
+	/// the next sync from adding more.
+	#[tracing::instrument(level = "debug", skip(self))]
+	pub async fn set_follows_catalog(
+		&self,
+		cluster_id: ClusterId,
+		follows: bool,
+	) -> ClusterResult<()> {
+		let cluster = self.get(cluster_id).await?;
+		let marker = cluster.catalog_marker()?;
+
+		if follows {
+			if marker.exists() {
+				polyio::remove_file(&marker).await.ok();
+			}
+		} else {
+			polyio::create_dir_all(cluster.dir()?).await?;
+			polyio::write(&marker, b"").await.ok();
+		}
+		Ok(())
+	}
+
 	#[tracing::instrument(level = "debug", skip(self))]
 	pub async fn add_playtime(
 		&self,

@@ -1181,6 +1181,7 @@ impl Actions {
         &self,
         options: twoclient_core::CreateClusterOptions,
         dedicated: bool,
+        catalog_mods: bool,
         mut active: State<Option<ClusterId>>,
     ) {
         spawn_forever(async move {
@@ -1200,6 +1201,18 @@ impl Actions {
                     return;
                 }
             };
+
+            // The catalog adds its mods to everything on a matching version and
+            // loader, which is not what an instance made by hand is for
+            if !catalog_mods
+                && let Err(err) = state.clusters.set_follows_catalog(cluster.id, false).await
+            {
+                tracing::warn!(
+                    cluster_id = cluster.id,
+                    error = %err,
+                    "instance created, but the catalog will still add mods to it"
+                );
+            }
 
             // A shared game folder is the launcher's default, which suits the
             // version cards Somebody who names an instance means a separate one

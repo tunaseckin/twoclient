@@ -96,6 +96,10 @@ pub enum ClusterAction {
         cluster_id: ClusterId,
         name: String,
     },
+    SetFollowsCatalog {
+        cluster_id: ClusterId,
+        follows: bool,
+    },
     VerifyFiles {
         cluster_id: ClusterId,
     },
@@ -158,6 +162,31 @@ impl MutationCapability for ClusterMutation {
                 .map_err(|err| twoclient_content::ContentError::InvalidData {
                     reason: err.to_string(),
                 }),
+            ClusterAction::SetFollowsCatalog {
+                cluster_id,
+                follows,
+            } => {
+                let set = state
+                    .clusters
+                    .set_follows_catalog(*cluster_id, *follows)
+                    .await
+                    .map_err(|err| twoclient_content::ContentError::InvalidData {
+                        reason: err.to_string(),
+                    });
+
+                // Opting in is the user asking for the mods now, not at some
+                // later sync
+                match (set, *follows) {
+                    (Ok(()), true) => twoclient_core::apply_bundle_updates(
+                        *cluster_id,
+                        state.bundles.as_ref(),
+                        content,
+                    )
+                    .await
+                    .map(|_| ()),
+                    (other, _) => other,
+                }
+            }
             ClusterAction::SetDedicatedDir {
                 cluster_id,
                 dedicated,

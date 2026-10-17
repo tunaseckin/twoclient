@@ -179,3 +179,36 @@ async fn names_are_unique_and_renameable() {
 			.is_ok()
 	);
 }
+
+#[tokio::test]
+async fn an_instance_can_opt_out_of_the_catalog() {
+	let state = twoclient_core::dev::ephemeral_state().await.unwrap();
+	let global = state.settings.read().global_game_settings.clone();
+
+	let cluster = state
+		.clusters
+		.create(
+			&global,
+			CreateClusterOptions::new("Hand Built", "1.21.1", GameLoader::Fabric),
+		)
+		.await
+		.unwrap();
+
+	// Catalog mods are the default, so a fresh instance is in
+	assert!(cluster.follows_catalog());
+
+	state
+		.clusters
+		.set_follows_catalog(cluster.id, false)
+		.await
+		.unwrap();
+	let out = state.clusters.get(cluster.id).await.unwrap();
+	assert!(!out.follows_catalog());
+
+	state
+		.clusters
+		.set_follows_catalog(cluster.id, true)
+		.await
+		.unwrap();
+	assert!(state.clusters.get(cluster.id).await.unwrap().follows_catalog());
+}

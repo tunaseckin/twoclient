@@ -884,6 +884,12 @@ pub async fn apply_bundle_updates_for_all_clusters(
 ) -> ContentResult<Vec<(i64, ApplyBundleUpdatesResult)>> {
     let mut changed = Vec::new();
     for cluster in cluster_dao::list_all(&ctx.db).await? {
+        // An instance that opted out is still updated when the user asks for it
+        // through `apply_bundle_updates`; it just is not swept up by the sync
+        if !twoclient_common::paths::cluster_follows_catalog(&cluster.folder_name) {
+            continue;
+        }
+
         match apply_bundle_updates_with(cluster.id, bundles, ctx, session).await {
             Ok(result) => {
                 if !result.updates_applied.is_empty()

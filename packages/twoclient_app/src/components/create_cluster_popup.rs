@@ -36,6 +36,7 @@ impl Component for CreateClusterPopup {
         let name = use_state(String::new);
         let mut snapshots = use_state(|| false);
         let mut dedicated = use_state(|| true);
+        let mut catalog_mods = use_state(|| false);
         let mut version_index = use_state(|| 0_usize);
         let mut loader_index = use_state(|| 0_usize);
 
@@ -149,6 +150,16 @@ impl Component for CreateClusterPopup {
                                 .into_element(),
                             ))
                             .child(switch_row(
+                                *catalog_mods.read(),
+                                EventHandler::new(move |()| {
+                                    let on = *catalog_mods.peek();
+                                    catalog_mods.set(!on);
+                                }),
+                                "Install the recommended mods",
+                                "The packaged set for this version and loader. Off means an \
+                                 empty instance you add to yourself.",
+                            ))
+                            .child(switch_row(
                                 *dedicated.read(),
                                 EventHandler::new(move |()| {
                                     let on = *dedicated.peek();
@@ -186,6 +197,7 @@ impl Component for CreateClusterPopup {
                                                         picked_loader,
                                                     ),
                                                     *dedicated.peek(),
+                                                    *catalog_mods.peek(),
                                                     active_id,
                                                 );
                                                 close_on_create.call(());
