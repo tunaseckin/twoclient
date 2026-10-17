@@ -13,7 +13,7 @@ BEGIN_SEC = "; >>> VC_REDIST_SECTION >>>"
 END_SEC = "; <<< VC_REDIST_SECTION <<<"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_CARGO_TOML = REPO_ROOT / "packages" / "oneclient_app" / "Cargo.toml"
+DEFAULT_CARGO_TOML = REPO_ROOT / "packages" / "twoclient_app" / "Cargo.toml"
 DEFAULT_OUT = REPO_ROOT / "target" / "crt"
 
 VSWHERE = Path(

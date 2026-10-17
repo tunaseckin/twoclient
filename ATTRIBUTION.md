@@ -2,10 +2,10 @@
 
 The source code of this repository is licensed under the GNU General Public License, Version 3 only, which is provided in the file [LICENSE](./LICENSE), with a header provided below. Certain files in our library wrappers may be under a different license or [require credit](#additional-libraries), with their specific headers outlined in the below non-exhaustive list.
 
-## OneLauncher
+## TwoLauncher
 
 ```txt
-OneLauncher - Open source Rust-based Minecraft Launcher
+TwoLauncher - Open source Rust-based Minecraft Launcher
 Copyright (C) 2023~CURRENT  Polyfrost and Contributors
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3 of the License.
@@ -16,10 +16,10 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 You should have received a copy of the GNU General Public License along with this program.  If not, see <https://www.gnu.org/licenses/>.
 ```
 
-## OneClient
+## TwoClient
 
 ```txt
-OneClient - A Minecraft Launcher
+TwoClient - A Minecraft Launcher
 Copyright (C) 2023~CURRENT  Polyfrost and Contributors
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3 of the License.
@@ -32,7 +32,7 @@ You should have received a copy of the GNU General Public License along with thi
 
 ## Polyfrost branding
 
-Any files depicting [Polyfrost branding](https://polyfrost.org/legal/branding), including the Polyfrost logo, any landing and background images, the OneConfig logo, the OneLauncher logo, and variations thereof, are licensed under the following:
+Any files depicting [Polyfrost branding](https://polyfrost.org/legal/branding), including the Polyfrost logo, any landing and background images, the OneConfig logo, the TwoLauncher logo, and variations thereof, are licensed under the following:
 
 ```txt
 All rights reserved. Copyright (C) 2022~CURRENT Polyfrost

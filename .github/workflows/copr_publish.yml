@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. oneclient-2.0.1)'
+        description: 'Release tag (e.g. twoclient-2.0.1)'
         required: true
 
 jobs:
@@ -19,10 +19,10 @@ jobs:
         id: parse
         run: |
           TAG="${{ github.event.release.tag_name || inputs.tag }}"
-          if [[ "$TAG" =~ ^oneclient-(.+)$ ]]; then
+          if [[ "$TAG" =~ ^twoclient-(.+)$ ]]; then
             echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::Tag '$TAG' does not match oneclient-*"
+            echo "::error::Tag '$TAG' does not match twoclient-*"
             exit 1
           fi
 
@@ -40,15 +40,15 @@ jobs:
         env:
           VERSION: ${{ needs.resolve.outputs.version }}
         run: |
-          SPEC="distribution/copr/oneclient-bin.spec"
+          SPEC="distribution/copr/twoclient-bin.spec"
           sed -i "s/^Version:.*/Version:        ${VERSION}/" "$SPEC"
           sed -i "s/^Release:.*/Release:        1%{?dist}/" "$SPEC"
 
       - name: Build SRPM
         run: |
           rpmdev-setuptree
-          spectool -g -R distribution/copr/oneclient-bin.spec
-          rpmbuild -bs distribution/copr/oneclient-bin.spec
+          spectool -g -R distribution/copr/twoclient-bin.spec
+          rpmbuild -bs distribution/copr/twoclient-bin.spec
 
       - name: Submit to COPR
         env:
@@ -57,4 +57,4 @@ jobs:
           mkdir -p ~/.config
           printf '%s' "$COPR_CONFIG_CONTENT" > ~/.config/copr
           chmod 600 ~/.config/copr
-          copr-cli build polyfrost/OneClient ~/rpmbuild/SRPMS/oneclient-bin-*.src.rpm
+          copr-cli build polyfrost/TwoClient ~/rpmbuild/SRPMS/twoclient-bin-*.src.rpm
