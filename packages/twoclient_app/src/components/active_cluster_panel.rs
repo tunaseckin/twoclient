@@ -72,7 +72,7 @@ impl Component for ActiveClusterPanel {
                 );
         };
 
-        let title = format!("{} {}", cluster.mc_version, cluster.mc_loader);
+        let title = cluster.name.clone();
         let subtitle = metadata
             .map(|m| m.name)
             .unwrap_or_else(|| cluster.name.clone());

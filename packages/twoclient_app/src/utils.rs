@@ -121,10 +121,15 @@ pub fn version_keys(clusters: &[Cluster]) -> Vec<VersionKey> {
     keys
 }
 
+/// Every loader present on the line, Vanilla included
+///
+/// Vanilla used to be filtered out, which was harmless while the catalog only
+/// ever provisioned modded clusters. Once instances can be created, dropping it
+/// hides every Vanilla one behind a loader that cannot be selected.
 pub fn loaders_for_line(clusters: &[Cluster]) -> Vec<GameLoader> {
     let mut loaders = Vec::new();
     for cluster in clusters {
-        if cluster.mc_loader.is_modded() && !loaders.contains(&cluster.mc_loader) {
+        if !loaders.contains(&cluster.mc_loader) {
             loaders.push(cluster.mc_loader);
         }
     }
@@ -399,6 +404,21 @@ mod tests {
             vec![1, 2],
             "a second instance on the same version was unreachable before"
         );
+    }
+
+    #[test]
+    fn a_vanilla_instance_is_a_selectable_loader() {
+        let mut vanilla = versioned(1, "1.21.1");
+        vanilla.mc_loader = GameLoader::Vanilla;
+        let mut fabric = versioned(2, "1.21.1");
+        fabric.mc_loader = GameLoader::Fabric;
+
+        let loaders = loaders_for_line(&[vanilla, fabric]);
+        assert!(
+            loaders.contains(&GameLoader::Vanilla),
+            "a Vanilla instance is unreachable if its loader is not offered"
+        );
+        assert_eq!(loaders.len(), 2);
     }
 
     #[test]
