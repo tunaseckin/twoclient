@@ -70,6 +70,14 @@ impl Component for ClusterSettings {
                     .width(Size::fill())
                     .height(Size::fill())
                     .spacing(4.)
+                    .child(section_header("INSTANCE"))
+                    .child(
+                        RenameRow {
+                            cluster_id,
+                            name: cluster.name.clone(),
+                        }
+                        .into_element(),
+                    )
                     .child(section_header("GAME"))
                     .child(
                         ToggleRow {
@@ -311,6 +319,48 @@ impl Component for VerifyFilesRow {
             "Check every installed file against its official checksum and \
              re-download anything corrupt or missing. Takes a few minutes.",
             button,
+        )
+    }
+}
+
+/// Commits on Enter rather than on every keystroke: a rename is a row write
+/// and a half-typed name would fail the uniqueness check against itself
+#[derive(PartialEq)]
+struct RenameRow {
+    cluster_id: i64,
+    name: String,
+}
+
+impl Component for RenameRow {
+    fn render(&self) -> impl IntoElement {
+        let cluster_id = self.cluster_id;
+        let mutation = use_cluster_mutation();
+        let current = self.name.clone();
+
+        let text = use_state({
+            let v = self.name.clone();
+            move || v
+        });
+
+        let on_submit = move |value: String| {
+            let trimmed = value.trim().to_string();
+            if trimmed.is_empty() || trimmed == current {
+                return;
+            }
+            mutation.mutate(ClusterAction::RenameCluster {
+                cluster_id,
+                name: trimmed,
+            });
+        };
+
+        settings_row(
+            IconType::Pencil01,
+            "Name",
+            "What this instance is called everywhere. Press Enter to apply.",
+            TextInput::new(text)
+                .width(Size::px(200.))
+                .on_submit(on_submit)
+                .into_element(),
         )
     }
 }

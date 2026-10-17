@@ -92,6 +92,10 @@ pub enum ClusterAction {
         cluster_id: ClusterId,
         dedicated: bool,
     },
+    RenameCluster {
+        cluster_id: ClusterId,
+        name: String,
+    },
     VerifyFiles {
         cluster_id: ClusterId,
     },
@@ -146,6 +150,14 @@ impl MutationCapability for ClusterMutation {
                 )
                 .await
             }
+            ClusterAction::RenameCluster { cluster_id, name } => state
+                .clusters
+                .rename(*cluster_id, name)
+                .await
+                .map(|_| ())
+                .map_err(|err| twoclient_content::ContentError::InvalidData {
+                    reason: err.to_string(),
+                }),
             ClusterAction::SetDedicatedDir {
                 cluster_id,
                 dedicated,

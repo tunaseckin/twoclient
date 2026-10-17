@@ -67,6 +67,9 @@ pub enum ClusterError {
 	#[error("cluster name is empty after sanitization")]
 	EmptyName,
 
+	#[error("an instance called \"{0}\" already exists")]
+	NameTaken(String),
+
 	#[error("unknown loader id {0} in database")]
 	InvalidLoader(i64),
 
