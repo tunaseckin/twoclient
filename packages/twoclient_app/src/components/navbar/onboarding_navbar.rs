@@ -1,7 +1,7 @@
 use freya::prelude::*;
 
 use crate::components::window_controls;
-use crate::theme::{self, colors};
+use crate::theme;
 
 #[derive(PartialEq)]
 pub struct OnboardingNavbar;
