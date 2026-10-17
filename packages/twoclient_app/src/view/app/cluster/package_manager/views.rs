@@ -137,6 +137,7 @@ pub(super) fn toolbar_bar(
     grid_columns: State<u8>,
     cluster_id: i64,
     package_type: &'static str,
+    shown: Vec<PackageEntry>,
 ) -> impl IntoElement {
     let tab_items = tabs.iter().enumerate().map(|(i, tab)| {
         let mut active = active;
@@ -187,6 +188,10 @@ pub(super) fn toolbar_bar(
             current_sort,
             enabled_filter,
             hidden_filter,
+        })
+        .child(BulkToggle {
+            cluster_id,
+            shown,
         })
         .maybe_child(
             (*layout.read() == ViewLayout::Grid)
@@ -826,4 +831,56 @@ fn local_empty(
         .child(rect().height(Size::px(6.)))
         .child(add_from_file_button(cluster_id, content_type, dispatch))
         .into_element()
+}
+
+/// Flips everything the current tab, search and filters leave on screen
+///
+/// Narrow the list first, then act on it: that is what makes it usable on a
+/// cluster carrying hundreds of mods, where the per-row switch is not
+#[derive(PartialEq)]
+struct BulkToggle {
+    cluster_id: i64,
+    shown: Vec<PackageEntry>,
+}
+
+impl Component for BulkToggle {
+    fn render(&self) -> impl IntoElement {
+        let dispatch = use_dispatch();
+        let cluster_id = self.cluster_id;
+
+        let to_enable = crate::hooks::packages_to_flip(&self.shown, true);
+        let to_disable = crate::hooks::packages_to_flip(&self.shown, false);
+        let can_enable = !to_enable.is_empty();
+        let can_disable = !to_disable.is_empty();
+        let enable_dispatch = dispatch.clone();
+
+        rect()
+            .horizontal()
+            .spacing(6.)
+            .cross_align(Alignment::Center)
+            .child(
+                Button::new()
+                    .secondary()
+                    .height(Size::px(34.))
+                    .font_size(12.)
+                    .enabled(can_enable)
+                    .alt("Enable every package shown")
+                    .on_press(move |_| {
+                        enable_dispatch.set_packages_enabled(cluster_id, to_enable.clone(), true)
+                    })
+                    .text("Enable shown"),
+            )
+            .child(
+                Button::new()
+                    .secondary()
+                    .height(Size::px(34.))
+                    .font_size(12.)
+                    .enabled(can_disable)
+                    .alt("Disable every package shown")
+                    .on_press(move |_| {
+                        dispatch.set_packages_enabled(cluster_id, to_disable.clone(), false)
+                    })
+                    .text("Disable shown"),
+            )
+    }
 }

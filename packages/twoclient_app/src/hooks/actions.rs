@@ -66,6 +66,22 @@ fn plan_package_updates(
     }
 }
 
+/// The rows a bulk enable/disable would actually touch
+///
+/// A row with neither a hash nor a bundle has nothing to flip: it is a browser
+/// result, not something installed. One already in the target state is skipped
+/// so the count the user is shown is the count that changed.
+pub fn packages_to_flip(
+    rows: &[crate::components::PackageEntry],
+    enabled: bool,
+) -> Vec<crate::components::PackageEntry> {
+    rows.iter()
+        .filter(|p| p.hash.is_some() || p.bundle_name.is_some())
+        .filter(|p| p.enabled != enabled)
+        .cloned()
+        .collect()
+}
+
 /// The pump alone owns the toast timers so adding or removing a toast has to
 /// tell it to re-arm hover-pause is a timer property not component state
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1213,6 +1229,73 @@ impl Actions {
         });
     }
 
+    /// Flips a whole list of packages at once
+    ///
+    /// One task and one invalidation for the batch: routing each row through
+    /// the cluster mutation instead would re-run every cluster query per row,
+    /// and the lists this exists for are hundreds of rows long.
+    pub fn set_packages_enabled(
+        &self,
+        cluster_id: ClusterId,
+        targets: Vec<crate::components::PackageEntry>,
+        enabled: bool,
+    ) {
+        let actions = self.clone();
+        spawn_forever(async move {
+            let Ok(state) = launcher::state() else { return };
+            let content = state.services.content();
+
+            let mut changed = 0usize;
+            let mut failed = 0usize;
+
+            for item in packages_to_flip(&targets, enabled) {
+                let result = if let Some(hash) = &item.hash {
+                    twoclient_core::set_artifact_enabled_to(cluster_id, hash, enabled, &content)
+                        .await
+                        .map(|_| ())
+                } else if let Some(bundle_name) = &item.bundle_name {
+                    twoclient_core::set_bundle_package_enabled(
+                        cluster_id,
+                        bundle_name,
+                        &item.package_id,
+                        enabled,
+                        item.manifest_default,
+                        &content,
+                    )
+                    .await
+                } else {
+                    continue;
+                };
+
+                match result {
+                    Ok(()) => changed += 1,
+                    Err(err) => {
+                        failed += 1;
+                        tracing::warn!(
+                            cluster_id,
+                            package = %item.package_id,
+                            error = %err,
+                            "bulk enable/disable skipped a package"
+                        );
+                    }
+                }
+            }
+
+            super::invalidate_cluster_queries().await;
+
+            let verb = if enabled { "enabled" } else { "disabled" };
+            let body = if failed > 0 {
+                format!("{changed} {verb}, {failed} could not be changed")
+            } else {
+                format!("{changed} {verb}")
+            };
+            actions
+                .notify(if enabled { "Packages enabled" } else { "Packages disabled" })
+                .body(body)
+                .send();
+        });
+    }
+
     /// App-scoped on purpose: the copy has to outlive the settings page, which
     /// unmounts as soon as the router swaps to the move screen
     pub fn relocate(&self, plan: RelocationPlan) {
@@ -1809,3 +1892,58 @@ impl NotificationBuilder {
     }
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::PackageEntry;
+    use twoclient_content::packages::ProviderId;
+
+    fn row(enabled: bool, hash: Option<&str>, bundle: Option<&str>) -> PackageEntry {
+        PackageEntry {
+            package_id: "p".into(),
+            bundle_name: bundle.map(Into::into),
+            provider: ProviderId::Modrinth,
+            name: "Sodium".into(),
+            file_name: "sodium.jar".into(),
+            author: String::new(),
+            description: String::new(),
+            icon_url: None,
+            size: 0,
+            categories: Vec::new(),
+            enabled,
+            installed: hash.is_some(),
+            hash: hash.map(Into::into),
+            manifest_default: false,
+            hidden: false,
+            update_available: false,
+            seen_status: Default::default(),
+        }
+    }
+
+    #[test]
+    fn a_browser_result_has_nothing_to_flip() {
+        let rows = vec![row(false, None, None)];
+        assert!(packages_to_flip(&rows, true).is_empty());
+        assert!(packages_to_flip(&rows, false).is_empty());
+    }
+
+    #[test]
+    fn rows_already_in_the_target_state_are_left_alone() {
+        let rows = vec![row(true, Some("a"), None), row(false, Some("b"), None)];
+
+        let enabling = packages_to_flip(&rows, true);
+        assert_eq!(enabling.len(), 1);
+        assert_eq!(enabling[0].hash.as_deref(), Some("b"));
+
+        let disabling = packages_to_flip(&rows, false);
+        assert_eq!(disabling.len(), 1);
+        assert_eq!(disabling[0].hash.as_deref(), Some("a"));
+    }
+
+    #[test]
+    fn a_bundle_package_with_no_file_on_disk_is_still_switchable() {
+        let rows = vec![row(true, None, Some("Performance"))];
+        assert_eq!(packages_to_flip(&rows, false).len(), 1);
+    }
+}
