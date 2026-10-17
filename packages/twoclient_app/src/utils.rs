@@ -54,7 +54,7 @@ impl ReleaseLine {
     }
 }
 
-fn cluster_key(cluster: &Cluster) -> Option<VersionKey> {
+pub fn cluster_key(cluster: &Cluster) -> Option<VersionKey> {
     parse_mc_version(&cluster.mc_version).and_then(|parsed| parsed.key())
 }
 
@@ -97,11 +97,9 @@ pub fn group_clusters_by_release(clusters: &[Cluster]) -> ClusterGroups {
 pub fn loader_tags(clusters: &[Cluster]) -> Vec<String> {
     let mut tags = Vec::new();
     for cluster in clusters {
-        if cluster.mc_loader.is_modded() {
-            let label = cluster.mc_loader.to_string();
-            if !tags.iter().any(|t| t == &label) {
-                tags.push(label);
-            }
+        let label = cluster.mc_loader.to_string();
+        if !tags.iter().any(|t| t == &label) {
+            tags.push(label);
         }
     }
     tags.sort();
