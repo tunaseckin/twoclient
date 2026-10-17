@@ -35,7 +35,7 @@ pub fn parse_changelog(data: &str) -> Vec<ChangelogGroup> {
 #[tracing::instrument(level = "debug", skip(net))]
 pub async fn fetch_changelog(net: &RequestClient) -> LauncherResult<String> {
     let url = format!(
-        "{}/twoclient/CHANGE_LOG.md",
+        "{}/oneclient/CHANGE_LOG.md",
         net.config().meta_url_base
     );
     let cache_path = paths::caches_dir()?.join("CHANGE_LOG.md");

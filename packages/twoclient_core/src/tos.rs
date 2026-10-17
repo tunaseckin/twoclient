@@ -52,7 +52,7 @@ impl TermsDocument {
 #[tracing::instrument(level = "debug", skip(net))]
 pub async fn fetch_terms(net: &RequestClient) -> LauncherResult<TermsDocument> {
     let url = format!(
-        "{}/twoclient/tos.json",
+        "{}/oneclient/tos.json",
         net.config().meta_url_base
     );
     let cache_path = paths::caches_dir()?.join("TERMS.json");

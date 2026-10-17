@@ -70,12 +70,13 @@ fn navbar_left() -> impl IntoElement {
 }
 
 fn navbar_logo() -> impl IntoElement {
-    let bytes = use_memo(|| crate::AppAssets::get_bytes("logo.svg").unwrap_or_default());
-
-    SvgViewer::new(("logo.svg", bytes.read().cloned()))
-        .show_loader(false)
-        .height(Size::px(44.))
-        .width(Size::px(214.))
+    // The old wordmark was an SVG of letter outlines, so it could not be
+    // renamed; set in the app's own font instead
+    label()
+        .text("TWOCLIENT")
+        .font_family(theme::DEFAULT_FONT)
+        .font_size(26.)
+        .font_weight(FontWeight::BOLD)
         .color(theme::colors::fg_primary())
 }
 

@@ -68,7 +68,7 @@ impl VersionsManager {
     ) -> LauncherResult<Option<(VersionsManifest, bool)>> {
         let manifest_path = paths::caches_dir()?.join("versions.json");
         let url = format!(
-            "{}/twoclient/versions/metadata.json",
+            "{}/oneclient/versions/metadata.json",
             services.requester.config().meta_url_base
         );
 
