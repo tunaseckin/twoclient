@@ -123,6 +123,17 @@ pub fn shared_minecraft_dir() -> PathsResult<PathBuf> {
 /// Presence marks a cluster folder as its own game dir instead of the shared `.minecraft`
 pub const DEDICATED_MARKER: &str = ".dedicated_directory";
 
+/// Present when an instance has opted out of the bundle catalog
+///
+/// A file rather than a column for the same reason [`DEDICATED_MARKER`] is one:
+/// it belongs to the folder, and it travels with it.
+pub const CATALOG_OPT_OUT_MARKER: &str = ".no_catalog_mods";
+
+/// Catalog mods are the default, so the absence of the marker means yes
+pub fn cluster_follows_catalog(folder_name: &str) -> bool {
+	!cluster_dir(folder_name).is_ok_and(|dir| dir.join(CATALOG_OPT_OUT_MARKER).exists())
+}
+
 pub fn cluster_dir(folder_name: &str) -> PathsResult<PathBuf> {
 	Ok(clusters_dir()?.join(folder_name))
 }

@@ -78,6 +78,13 @@ impl Component for ClusterSettings {
                         }
                         .into_element(),
                     )
+                    .child(
+                        CatalogModsRow {
+                            cluster_id,
+                            follows: cluster.follows_catalog(),
+                        }
+                        .into_element(),
+                    )
                     .child(section_header("GAME"))
                     .child(
                         ToggleRow {
@@ -361,6 +368,37 @@ impl Component for RenameRow {
                 .width(Size::px(200.))
                 .on_submit(on_submit)
                 .into_element(),
+        )
+    }
+}
+
+/// Turning this on installs the packaged set now; turning it off stops the
+/// next sync adding more and leaves what is installed alone
+#[derive(PartialEq)]
+struct CatalogModsRow {
+    cluster_id: i64,
+    follows: bool,
+}
+
+impl Component for CatalogModsRow {
+    fn render(&self) -> impl IntoElement {
+        let cluster_id = self.cluster_id;
+        let follows = self.follows;
+        let mutation = use_cluster_mutation();
+
+        let on_toggle: EventHandler<()> = (move |()| {
+            mutation.mutate(ClusterAction::SetFollowsCatalog {
+                cluster_id,
+                follows: !follows,
+            });
+        })
+        .into();
+
+        settings_row(
+            IconType::DownloadCloud02,
+            "Recommended mods",
+            "Install the packaged set for this version and loader, and keep it updated.",
+            toggle_controlled(follows, on_toggle),
         )
     }
 }
