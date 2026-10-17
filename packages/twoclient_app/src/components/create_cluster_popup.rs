@@ -57,10 +57,10 @@ impl Component for CreateClusterPopup {
             .or_else(|| versions.first())
             .cloned();
 
-        let loaders = match &picked_version {
-            Some(version) => loaders_for_version(&use_loaders_for_version(version.clone())),
-            None => vec![GameLoader::Vanilla],
-        };
+        // Unconditional: a hook behind a `match` changes the hook count between
+        // renders as soon as the version list settles, which is a panic
+        let loaders_query = use_loaders_for_version(picked_version.clone().unwrap_or_default());
+        let loaders = loaders_for_version(&loaders_query);
         let loader_labels: Vec<String> =
             loaders.iter().map(|loader| loader.to_string()).collect();
         let picked_loader = loaders
