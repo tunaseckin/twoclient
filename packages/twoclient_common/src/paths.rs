@@ -6,8 +6,10 @@ use crate::domain::{ContentType, ProviderId};
 use crate::error::{PathsError, PathsResult};
 
 const QUALIFIER: &str = "org";
-const ORGANIZATION: &str = "Polyfrost";
+const ORGANIZATION: &str = "TwoClient";
 
+/// The vendor folder is gone: it existed so several Polyfrost products could
+/// share one parent, and this is one product
 #[cfg(not(debug_assertions))]
 const APPLICATION: &str = "TwoClient";
 
@@ -29,9 +31,9 @@ pub fn set_data_dir(dir: PathBuf) {
 	let _ = DATA_DIR_OVERRIDE.set(dir);
 }
 
-fn organization_dir() -> PathsResult<PathBuf> {
+fn app_dir() -> PathsResult<PathBuf> {
 	BaseDirs::new()
-		.map(|dirs| dirs.data_dir().join(ORGANIZATION))
+		.map(|dirs| dirs.data_dir().join(APPLICATION))
 		.ok_or(PathsError::DataDirUnavailable)
 }
 
@@ -47,7 +49,7 @@ fn resolve_default_dir() -> PathsResult<PathBuf> {
 		return Ok(legacy);
 	}
 
-	Ok(organization_dir()?.join(APPLICATION))
+	app_dir()
 }
 
 fn default_dir() -> PathsResult<&'static Path> {
@@ -80,7 +82,7 @@ pub fn data_dir() -> PathsResult<&'static Path> {
 
 #[must_use]
 pub fn picker_start_dir() -> Option<PathBuf> {
-	organization_dir()
+	app_dir()
 		.ok()
 		.filter(|dir| dir.is_dir())
 		.or_else(|| data_dir().ok().map(Path::to_path_buf))
@@ -222,27 +224,18 @@ mod tests {
 	use std::ffi::OsStr;
 
 	#[test]
-	fn the_launcher_sits_one_level_under_the_organization_folder() {
-		let organization = organization_dir().expect("a home directory");
-		assert_eq!(organization.file_name(), Some(OsStr::new(ORGANIZATION)));
-
-		let app = organization.join(APPLICATION);
-		let tail: Vec<&OsStr> = app.iter().rev().take(2).collect();
-
-		assert_eq!(
-			tail,
-			vec![OsStr::new(APPLICATION), OsStr::new(ORGANIZATION)],
-			"every Polyfrost product shares one folder and takes a single name inside it"
-		);
+	fn the_launcher_takes_one_folder_named_after_itself() {
+		let app = app_dir().expect("a home directory");
+		assert_eq!(app.file_name(), Some(OsStr::new(APPLICATION)));
 	}
 
 	#[cfg(windows)]
 	#[test]
 	fn a_windows_install_roams_with_the_user() {
-		let organization = organization_dir().expect("a home directory");
+		let app = app_dir().expect("a home directory");
 
 		assert!(
-			organization.iter().any(|part| part == OsStr::new("Roaming")),
+			app.iter().any(|part| part == OsStr::new("Roaming")),
 			"settings and saves follow the user between machines; Local would strand them"
 		);
 	}
