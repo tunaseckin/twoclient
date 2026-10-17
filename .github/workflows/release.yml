@@ -1,0 +1,109 @@
+name: release
+
+# Tag a commit to publish: git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact: TwoClient-macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: TwoClient-windows-x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: TwoClient-linux-x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install Linux build dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake pkg-config clang python3 \
+            libfontconfig-dev libfreetype-dev \
+            libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev \
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libdbus-1-dev
+
+      - name: Build
+        run: cargo build --release -p twoclient_app --target ${{ matrix.target }}
+
+      - name: Package (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          APP="dist/TwoClient.app"
+          mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
+          cp target/${{ matrix.target }}/release/twoclient_app "$APP/Contents/MacOS/TwoClient"
+          cp packages/twoclient_app/icons/icon.icns "$APP/Contents/Resources/icon.icns"
+          sed -e "s/__VERSION__/${GITHUB_REF_NAME#v}/g" \
+            .github/Info.plist.template > "$APP/Contents/Info.plist"
+          codesign --force --deep --sign - "$APP"
+          cd dist && zip -qry "${{ matrix.artifact }}.zip" TwoClient.app
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/twoclient_app.exe dist/TwoClient.exe
+          cd dist && 7z a "${{ matrix.artifact }}.zip" TwoClient.exe
+
+      - name: Package (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/twoclient_app dist/TwoClient
+          cd dist && tar czf "${{ matrix.artifact }}.tar.gz" TwoClient
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            dist/*.zip
+            dist/*.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
+          body: |
+            Unsigned builds. macOS and Windows will both warn on first run.
+
+            macOS: unzip, move TwoClient.app to Applications, then right-click
+            it and choose Open the first time.
+
+            Linux: untar and run ./TwoClient.

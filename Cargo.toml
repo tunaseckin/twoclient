@@ -144,6 +144,14 @@ freya-testing = {git = "https://github.com/marc2332/freya", branch = "fix/skip-b
 freya-skia-safe = "=0.100.0" # required for the SKSL player renderer
 image = {version = "=0.25.10", default-features = false, features = ["png", "jpeg"]}
 
+# Proc macros are dylibs rustc loads during the build, and stripping them with
+# packed debuginfo produces a LINKEDIT section that macOS 27's dyld refuses to
+# open. Build dependencies keep their symbols; the shipped binary is unaffected.
+[profile.release.build-override]
+debug = false
+split-debuginfo = "unpacked"
+strip = false
+
 [profile.release]
 codegen-units = 1
 debug = "line-tables-only"
