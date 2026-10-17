@@ -478,6 +478,7 @@ impl Component for PackageManager {
                 grid_columns,
                 cluster_id,
                 package_type,
+                filtered.clone(),
             ))
             .maybe_child(session_live.then(|| views::running_notice(noun_plural, content_type)))
             .child(ContentBox::new(
