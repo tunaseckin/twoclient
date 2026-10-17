@@ -114,8 +114,12 @@ impl Component for ClusterShell {
             cluster.as_ref().map(|c| c.mc_loader),
         );
 
+        // Without a loader the game cannot read mods, so the tab is an empty
+        // room someone has to walk into to find that out
+        let show_mods = cluster.as_ref().is_none_or(|c| c.mc_loader.is_modded());
+
         let header = cluster.as_ref().map(|cluster| {
-            let title = format!("{} {}", cluster.mc_loader, cluster.mc_version);
+            let title = cluster.name.clone();
             let subtitle = metadata
                 .and_then(|m| m.long_description)
                 .unwrap_or_else(|| cluster.name.clone());
@@ -148,7 +152,7 @@ impl Component for ClusterShell {
                     ))
                     .spacing(BAR_SPACING)
                     .maybe_child(header)
-                    .child(cluster_tabs(active_tab, cluster_id, show_game_log)),
+                    .child(cluster_tabs(active_tab, cluster_id, show_game_log, show_mods)),
             )
             .child(
                 rect()
@@ -297,12 +301,13 @@ fn cluster_tabs(
     active: ClusterViewShellTab,
     cluster_id: i64,
     show_game_log: bool,
+    show_mods: bool,
 ) -> impl IntoElement {
     let tabs = [
         Some(ClusterViewShellTab::Overview),
         Some(ClusterViewShellTab::Logs),
         Some(ClusterViewShellTab::Screenshots),
-        Some(ClusterViewShellTab::Mods),
+        show_mods.then_some(ClusterViewShellTab::Mods),
         Some(ClusterViewShellTab::Shaders),
         Some(ClusterViewShellTab::Textures),
         Some(ClusterViewShellTab::Settings),
