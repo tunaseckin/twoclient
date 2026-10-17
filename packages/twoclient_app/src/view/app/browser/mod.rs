@@ -15,7 +15,7 @@ use crate::hooks::{loaded_image, use_cached_image};
 use crate::theme::colors;
 use crate::ui::border_all_color;
 
-const BANNER_BG: Color = Color::from_rgb(21, 28, 34);
+const BANNER_BG: Color = Color::from_rgb(20, 27, 28);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum InstallSource {

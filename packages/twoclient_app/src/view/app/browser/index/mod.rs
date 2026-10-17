@@ -42,7 +42,7 @@ use cards::{empty_state, grid_row, list_row};
 use sidebar::CategorySidebar;
 use skeletons::{SkeletonListRow, skeleton_grid_row};
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 const CARD_NAME: Color = Color::from_rgb(213, 219, 255);
 const SCROLLBAR_GUTTER: f32 = 18.;
 const CARD_H: f32 = 240.;

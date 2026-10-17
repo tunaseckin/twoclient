@@ -4,31 +4,31 @@ pub const MODRINTH_COLOR: Color = Color::from_rgb(27, 217, 106);
 pub const CURSEFORGE_COLOR: Color = Color::from_rgb(241, 100, 54);
 
 pub fn page() -> Color {
-    Color::from_rgb(17, 23, 28)
+    Color::from_rgb(16, 22, 23)
 }
 
 pub fn page_elevated() -> Color {
-    Color::from_rgb(21, 28, 34)
+    Color::from_rgb(20, 27, 28)
 }
 
 pub fn page_overlay() -> Color {
-    Color::from_argb(140, 17, 23, 28)
+    Color::from_argb(140, 16, 22, 23)
 }
 
 pub fn fg_primary() -> Color {
-    Color::from_rgb(213, 219, 255)
+    Color::from_rgb(222, 230, 231)
 }
 
 pub fn fg_primary_hover() -> Color {
-    Color::from_rgb(218, 224, 255)
+    Color::from_rgb(230, 237, 238)
 }
 
 pub fn fg_primary_pressed() -> Color {
-    Color::from_rgb(225, 229, 255)
+    Color::from_rgb(238, 244, 245)
 }
 
 pub fn fg_primary_disabled() -> Color {
-    Color::from_rgb(205, 209, 235)
+    Color::from_rgb(205, 213, 214)
 }
 
 pub fn fg_secondary() -> Color {
@@ -44,19 +44,19 @@ pub fn fg_secondary_pressed() -> Color {
 }
 
 pub fn brand() -> Color {
-    Color::from_rgb(43, 75, 255)
+    Color::from_rgb(14, 165, 168)
 }
 
 pub fn brand_hover() -> Color {
-    Color::from_rgb(40, 67, 221)
+    Color::from_rgb(12, 142, 145)
 }
 
 pub fn brand_pressed() -> Color {
-    Color::from_rgb(57, 87, 255)
+    Color::from_rgb(23, 186, 189)
 }
 
 pub fn brand_disabled() -> Color {
-    Color::from_rgb(31, 47, 129)
+    Color::from_rgb(13, 74, 76)
 }
 
 pub fn ghost_overlay() -> Color {

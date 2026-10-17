@@ -17,7 +17,7 @@ use crate::hooks::{settled_or_loading, use_active_cluster_id, use_clusters, use_
 use crate::theme::colors;
 use crate::ui::border_all_color;
 
-const DIALOG_BG: Color = Color::from_rgb(26, 34, 41);
+const DIALOG_BG: Color = Color::from_rgb(25, 33, 34);
 const DIALOG_W: f32 = 480.;
 const FILE_ROW_H: f32 = 34.;
 const FILE_LIST_MAX_ROWS: usize = 5;

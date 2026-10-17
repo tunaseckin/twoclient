@@ -7,7 +7,7 @@ use crate::theme::colors;
 use crate::ui::border_all_color;
 use crate::utils::format_size;
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 const CARD_NAME: Color = Color::from_rgb(213, 219, 255);
 
 pub(super) const CARD_GRID_H: f32 = 148.;

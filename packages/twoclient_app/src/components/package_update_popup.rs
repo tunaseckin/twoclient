@@ -16,7 +16,7 @@ use crate::notifications::PackageUpdateGroup;
 use crate::theme::colors;
 use crate::ui::border_all_color;
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 const DIALOG_W: f32 = 520.;
 const DIALOG_H: f32 = 420.;
 const CHOICE_DROPDOWN_W: f32 = 150.;

@@ -16,7 +16,7 @@ use crate::notifications::{ClusterUpdateItem, OptionalModRef, OptionalModsGroup}
 use crate::theme::colors;
 use crate::ui::border_all_color;
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 const DIALOG_W: f32 = 720.;
 const DIALOG_PAD: f32 = 22.;
 const LIST_MAX_H: f32 = 306.;

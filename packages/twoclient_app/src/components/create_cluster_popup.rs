@@ -17,7 +17,7 @@ use crate::hooks::{
 use crate::theme::colors;
 use crate::ui::border_all_color;
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 const CARD_WIDTH_PX: f32 = 460.;
 
 /// Long enough to be worth scrolling, short enough that the list stays usable

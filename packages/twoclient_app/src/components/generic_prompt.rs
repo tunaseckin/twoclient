@@ -12,7 +12,7 @@ use crate::theme::colors;
 use crate::ui::border_all_color;
 use crate::updater::UPDATE_CHOICE_INSTALL;
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 
 fn claimed_elsewhere(prompt: &PendingPromptView) -> bool {
     prompt.has_choice(JAVA_CHOICE_DOWNLOAD) || prompt.has_choice(UPDATE_CHOICE_INSTALL)
