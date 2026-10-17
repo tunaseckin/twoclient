@@ -13,8 +13,9 @@ use crate::routes::Route;
 use crate::theme::colors;
 use crate::ui::border_all_color;
 use crate::utils::{
-    ReleaseLine, clusters_matching, default_line, default_loader, default_version_key,
-    group_clusters_by_release, line_title, loaders_for_line, version_keys, version_label,
+    ReleaseLine, cluster_key, clusters_matching, default_line, default_loader,
+    default_version_key, group_clusters_by_release, line_title, loaders_for_line, version_keys,
+    version_label,
 };
 use crate::view::app::launch_button_state;
 
@@ -184,7 +185,15 @@ impl Component for Clusters {
                                                     .into_element()
                                             }))
                                             .into_element()
-                                    })),
+                                    }))
+                                    .children(instance_cards(
+                                        &clusters_for_line,
+                                        cluster.as_ref().map(|c| c.id),
+                                        columns,
+                                        active_id,
+                                        selected_version,
+                                        selected_loader,
+                                    )),
                             ),
                     )
                     .child(match cluster {
@@ -476,6 +485,56 @@ fn view_button(cluster_id: i64, mut active_id: State<Option<i64>>) -> impl IntoE
         })
         .text("View")
         .child(Icon::new(IconType::ArrowRight).size(14.))
+}
+
+/// The instances on the selected line
+///
+/// The cards above are release lines, so an instance only ever showed as the
+/// version it sits on. These carry the name, which is the only thing telling
+/// two instances on one version and loader apart.
+fn instance_cards(
+    clusters: &[Cluster],
+    current: Option<i64>,
+    columns: usize,
+    active_id: State<Option<i64>>,
+    selected_version: State<Option<VersionKey>>,
+    selected_loader: State<Option<GameLoader>>,
+) -> Vec<Element> {
+    clusters
+        .chunks(columns.max(1))
+        .map(|row| {
+            let row_len = row.len();
+            rect()
+                .horizontal()
+                .width(Size::fill())
+                .content(Content::Flex)
+                .spacing(GRID_GAP_PX)
+                .children(row.iter().filter_map(|cluster| {
+                    let id = cluster.id;
+                    let key = cluster_key(cluster);
+                    let loader = cluster.mc_loader;
+                    let mut active_id = active_id;
+                    let mut selected_version = selected_version;
+                    let mut selected_loader = selected_loader;
+
+                    VersionCard::for_cluster(cluster, Some(id) == current, move |_| {
+                        // The sidebar reads these, so pointing at an instance has
+                        // to move them or it would show a different one
+                        *selected_version.write() = key;
+                        *selected_loader.write() = Some(loader);
+                        *active_id.write() = Some(id);
+                    })
+                    .map(IntoElement::into_element)
+                }))
+                .children((row_len..columns).map(|_| {
+                    rect()
+                        .width(Size::flex(1.0))
+                        .height(Size::px(CARD_HEIGHT_PX))
+                        .into_element()
+                }))
+                .into_element()
+        })
+        .collect()
 }
 
 fn page_header(on_new: EventHandler<()>) -> impl IntoElement {

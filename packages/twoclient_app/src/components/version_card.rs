@@ -19,6 +19,28 @@ pub struct VersionCard {
 }
 
 impl VersionCard {
+    /// One instance rather than a whole release line
+    ///
+    /// Titled by its name, because that is what distinguishes two instances on
+    /// the same version and loader
+    pub fn for_cluster(
+        cluster: &Cluster,
+        selected: bool,
+        on_press: impl Into<EventHandler<Event<PressEventData>>>,
+    ) -> Option<Self> {
+        let line = ReleaseLine::for_cluster(cluster)?;
+        let own = [cluster.clone()];
+
+        Some(Self {
+            line,
+            art_key: line_art_key(line, &own),
+            tags: vec![cluster.mc_loader.to_string()],
+            title: cluster.name.clone(),
+            selected,
+            on_press: on_press.into(),
+        })
+    }
+
     pub fn new(
         line: ReleaseLine,
         clusters: &[Cluster],
