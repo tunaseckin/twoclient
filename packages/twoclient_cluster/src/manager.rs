@@ -111,6 +111,7 @@ impl ClusterManager {
 		if name.is_empty() {
 			return Err(ClusterError::EmptyName);
 		}
+		self.ensure_name_free(&name, None).await?;
 
 		let folder_name = resolve_unique_folder_name(&name).await?;
 		let cluster_path = twoclient_common::paths::clusters_dir()?.join(&folder_name);
@@ -240,6 +241,40 @@ impl ClusterManager {
 			&self.db,
 			global,
 			cluster.setting_profile_name.as_deref(),
+		)
+		.await
+	}
+
+	/// Folders are made unique on their own, names are not, and two instances
+	/// with one name are two things the user cannot tell apart anywhere
+	async fn ensure_name_free(&self, name: &str, keep: Option<ClusterId>) -> ClusterResult<()> {
+		let taken = self
+			.list()
+			.await?
+			.into_iter()
+			.any(|other| Some(other.id) != keep && other.name.eq_ignore_ascii_case(name));
+
+		if taken {
+			return Err(ClusterError::NameTaken(name.to_string()));
+		}
+		Ok(())
+	}
+
+	/// Separate from [`Self::update`] so the name rule lives in one place
+	#[tracing::instrument(level = "debug", skip(self))]
+	pub async fn rename(&self, cluster_id: ClusterId, name: &str) -> ClusterResult<Cluster> {
+		let name = Self::sanitize_name(name);
+		if name.is_empty() {
+			return Err(ClusterError::EmptyName);
+		}
+		self.ensure_name_free(&name, Some(cluster_id)).await?;
+
+		self.update(
+			cluster_id,
+			ClusterUpdate {
+				name: Some(name),
+				..ClusterUpdate::default()
+			},
 		)
 		.await
 	}
