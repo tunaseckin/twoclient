@@ -173,7 +173,9 @@ impl Component for ClusterCard {
         let eased = stagger_eased(self.progress, self.index, self.items);
         let rise = (1.0 - eased) * CARD_RISE_PX;
 
-        let title = format!("{} {}", self.cluster.mc_version, self.cluster.mc_loader);
+        // The cluster's own name: provisioned ones are already called
+        // "<version> <loader>", and a created one is called what it was named
+        let title = self.cluster.name.clone();
 
         let cluster_id = self.cluster.id;
         let on_press = move |_| {
