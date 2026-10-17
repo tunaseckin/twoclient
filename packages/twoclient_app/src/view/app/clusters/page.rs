@@ -13,8 +13,8 @@ use crate::routes::Route;
 use crate::theme::colors;
 use crate::ui::border_all_color;
 use crate::utils::{
-    ReleaseLine, default_line, default_loader, default_version_key, group_clusters_by_release,
-    line_title, loaders_for_line, resolve_cluster, version_keys, version_label,
+    ReleaseLine, clusters_matching, default_line, default_loader, default_version_key,
+    group_clusters_by_release, line_title, loaders_for_line, version_keys, version_label,
 };
 use crate::view::app::launch_button_state;
 
@@ -106,12 +106,18 @@ impl Component for Clusters {
             *selected_loader.write() = default_loader(&clusters_for_line, preferred);
         }
 
-        let cluster = resolve_cluster(
+        // Several instances can sit on one version and loader, so the active one
+        // decides which of them the sidebar is showing
+        let instances = clusters_matching(
             &clusters_for_line,
             *selected_version.read(),
             *selected_loader.read(),
-        )
-        .or_else(|| clusters_for_line.first().cloned());
+        );
+        let cluster = active_id
+            .read()
+            .and_then(|id| instances.iter().find(|c| c.id == id).cloned())
+            .or_else(|| instances.first().cloned())
+            .or_else(|| clusters_for_line.first().cloned());
 
         let columns = *grid_columns.read();
         let grid_rows = chunk_lines(&lines, columns);
@@ -186,6 +192,7 @@ impl Component for Clusters {
                             line,
                             cluster_id: cluster.id,
                             clusters_for_line,
+                            instances,
                             selected_version,
                             selected_loader,
                         }
@@ -207,6 +214,8 @@ struct DetailSidebar {
     line: ReleaseLine,
     cluster_id: i64,
     clusters_for_line: Vec<Cluster>,
+    /// Everything on the selected version and loader, newest first
+    instances: Vec<Cluster>,
     selected_version: State<Option<VersionKey>>,
     selected_loader: State<Option<GameLoader>>,
 }
@@ -284,7 +293,8 @@ impl Component for DetailSidebar {
                                     .color(colors::fg_secondary()),
                             )
                             .children(version_rows(self.line, &keys, version_value, self.selected_version))
-                            .children(loader_rows(&loaders, loader_value, self.selected_loader)),
+                            .children(loader_rows(&loaders, loader_value, self.selected_loader))
+                            .children(instance_rows(&self.instances, self.cluster_id, active_id)),
                     )
                     .child(
                         rect()
@@ -383,6 +393,36 @@ fn loader_rows(
             .on_select(move |idx: usize| {
                 if let Some(loader) = loaders.get(idx).copied() {
                     *selected_loader.write() = Some(loader);
+                }
+            })
+            .into_element(),
+    ))
+}
+
+/// Only when there is a choice to make: one instance per version and loader is
+/// the common case and a dropdown of one is noise
+fn instance_rows(
+    instances: &[Cluster],
+    current: i64,
+    mut active_id: State<Option<i64>>,
+) -> Option<Element> {
+    if instances.len() < 2 {
+        return None;
+    }
+
+    let names: Vec<String> = instances.iter().map(|c| c.name.clone()).collect();
+    let ids: Vec<i64> = instances.iter().map(|c| c.id).collect();
+    let selected = instances
+        .iter()
+        .position(|c| c.id == current)
+        .unwrap_or(0);
+
+    Some(info_row(
+        "Instance",
+        Dropdown::new(names[selected].clone(), names.clone())
+            .on_select(move |idx: usize| {
+                if let Some(id) = ids.get(idx).copied() {
+                    *active_id.write() = Some(id);
                 }
             })
             .into_element(),

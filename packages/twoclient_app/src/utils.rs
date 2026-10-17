@@ -132,19 +132,24 @@ pub fn loaders_for_line(clusters: &[Cluster]) -> Vec<GameLoader> {
     loaders
 }
 
-pub fn resolve_cluster(
+/// Every cluster on this version and loader, not just the first
+///
+/// Nothing stops two instances sharing a version and loader, and picking the
+/// first match is what made the second one impossible to reach
+pub fn clusters_matching(
     clusters: &[Cluster],
     key: Option<VersionKey>,
     loader: Option<GameLoader>,
-) -> Option<Cluster> {
+) -> Vec<Cluster> {
     clusters
         .iter()
-        .find(|cluster| {
+        .filter(|cluster| {
             let version_ok = key.is_none_or(|key| cluster_key(cluster) == Some(key));
             let loader_ok = loader.is_none_or(|loader| cluster.mc_loader == loader);
             version_ok && loader_ok
         })
         .cloned()
+        .collect()
 }
 
 /// The line the page opens on the active cluster's line else the newest
@@ -377,6 +382,23 @@ mod tests {
             .keys()
             .copied()
             .collect()
+    }
+
+    #[test]
+    fn every_instance_on_a_version_and_loader_is_returned() {
+        let clusters = [
+            versioned(1, "1.21.1"),
+            versioned(2, "1.21.1"),
+            versioned(3, "1.21.4"),
+        ];
+        let key = cluster_key(&clusters[0]);
+
+        let matched = clusters_matching(&clusters, key, Some(clusters[0].mc_loader));
+        assert_eq!(
+            matched.iter().map(|c| c.id).collect::<Vec<_>>(),
+            vec![1, 2],
+            "a second instance on the same version was unreachable before"
+        );
     }
 
     #[test]

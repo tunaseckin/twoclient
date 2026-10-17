@@ -101,11 +101,6 @@ fn navbar_center() -> impl IntoElement {
             nav_label: "Versions",
         })
         .child(NavLink {
-            active: false,
-            target: NavTarget::External("https://store.polyfrost.org"),
-            nav_label: "Cosmetics",
-        })
-        .child(NavLink {
             active: matches!(
                 route,
                 Route::Browser {
