@@ -88,9 +88,9 @@ mod tests {
 	#[test]
 	fn lets_the_exempt_hosts_through() {
 		for url in [
-			"https://data-v2.polyfrost.org/twoclient/bundles/metadata.json",
-			"https://data-v2.polyfrost.org/twoclient/versions/art/Tricky_Trials.jpg",
-			"https://data-v2.polyfrost.org/twoclient/tos.json",
+			"https://data-v2.polyfrost.org/oneclient/bundles/metadata.json",
+			"https://data-v2.polyfrost.org/oneclient/versions/art/Tricky_Trials.jpg",
+			"https://data-v2.polyfrost.org/oneclient/tos.json",
 			"https://meta.polyfrost.org/fabric/v2/manifest.json",
 			"https://status.polyfrost.org/index.json",
 			"https://META.POLYFROST.ORG./minecraft/v1/manifest.json",

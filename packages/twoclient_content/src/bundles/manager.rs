@@ -250,7 +250,7 @@ impl BundlesManager {
     ) -> ContentResult<Option<FetchedManifest>> {
         let manifest_path = paths::bundles_dir()?.join("metadata.json");
         let url = format!(
-            "{}/twoclient/bundles/metadata.json",
+            "{}/oneclient/bundles/metadata.json",
             ctx.net.config().meta_url_base
         );
 
