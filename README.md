@@ -1,73 +1,56 @@
-<div align="center">
+# TwoClient
 
-<img src=".github/media/RepoBanner.png" alt="Repository Banner" />
+A fork of [OneClient](https://github.com/Polyfrost/OneLauncher) by Polyfrost, cut down and sped up.
 
-# TwoClient  |  TwoLauncher
-The monorepo containing the code for TwoLauncher, TwoClient, and their core backend.
+Everything that makes the game run is upstream's work. What changed is listed below.
 
-TwoClient is a Minecraft client featuring fully 100% open-source components, offering many packaged and pre-configured mods in one click.
-TwoLauncher is a WIP Minecraft launcher giving power-users the greatest customization whilst featuring a clean UI.
+## What is different
 
-</div>
+**Launching does not wait on the network.** Pressing Play used to run a bundle
+catalog sync, a bundle update, and a package update check first — up to ninety
+seconds of it, repeated every fifteen minutes. All of that moved into the
+startup sync, which nothing is waiting on. Play now costs what the game costs.
 
-## Installing
+**Closing the game is a request, not a kill.** The stop button sent SIGKILL, so
+the game never saved and every deliberate stop was reported as a crash. It now
+asks first and only kills a game that will not go. Minecraft's own shutdown
+watchdog — which turns a slow close into a crash report — is recognised for
+what it is instead of being repeated as "Game crashed" and followed by an offer
+to re-download the game.
 
-You can install the latest release of TwoClient from our website: [https://polyfrost.org/projects/twoclient](https://polyfrost.org/projects/twoclient)
-as well as our [GitHub releases](https://github.com/Polyfrost/TwoLauncher/releases/latest).
+**Instances can be created.** Upstream provisions one per version and loader
+from its catalog, with no way to make your own. New instances get their own
+game folder, so they have their own saves and options rather than sharing the
+one directory every instance swaps content in and out of.
 
-| Windows (x86_64) | macOS (Intel & Apple Silicon) | Linux (x86_64)                                          |
-|------------------|-------------------------------|---------------------------------------------------------|
-| Installer 🔄      | DMG 🔄                        | AppImage 🔄                                             |
-|                  | App Bundle 🔄                 | DEB                                                     |
-|                  |                               | RPM                                                     |
-|                  |                               | [AUR](https://aur.archlinux.org/packages/twoclient-bin) |
+**Instances can be renamed, and are shown by name** — on the versions page, the
+home cards and their own page. Two instances cannot share a name.
 
-> 🔄 = Has support for autoupdating built-in
+**Mods can be enabled or disabled in bulk**, over whatever the current tab,
+search and filters leave on screen. Narrowing a set of a few hundred mods down
+is how you find the one making the game slow to start or slow to close.
 
+**Nothing is reported home by default.** Crash reporting ships off. PolyPlus is
+gone: it held a websocket open for the whole session to report playtime, and its
+game-side half runs an Epic Online Services SDK whose shutdown handler was part
+of what the watchdog was waiting on.
 
-## Contributing
+**Importing from OneClient**, so moving across does not mean starting empty.
 
-We welcome contributions! Please read our [contributing guidelines](CONTRIBUTING.md) before getting started.
+## Building
 
-
-### Requirements
-
-The project targets **Rust 1.97** or later. You can install Rust via [rustup](https://rustup.rs/).
-
-
-### Building & Running
-
-```sh
-# Run the app
+```
 cargo run -p twoclient_app
-
-# Build a release binary
-cargo build -p twoclient_app --release
 ```
 
+`--launcher-dir <path>` roots the settings file, the database and the
+single-instance endpoint somewhere else, which is how to try a build without
+touching an installed launcher.
 
-### Packaging / Releasing
+## Licence
 
-Installers are produced with [**cargo-packager**](https://github.com/crabnebula-dev/cargo-packager)
-(the standalone bundler spun out of the Tauri bundler). Config lives in
-[`packages/twoclient_app/Cargo.toml`](./packages/twoclient_app/Cargo.toml) under
-`[package.metadata.packager]`.
+GPL-3.0, the same as upstream. See [LICENSE](LICENSE) and
+[ATTRIBUTION.md](ATTRIBUTION.md).
 
-```sh
-cargo install cargo-packager --locked
-
-# Build the binary, then bundle it for the current OS:
-cargo build --release -p twoclient_app
-cargo packager --release -p twoclient_app --formats <targets>
-#   Windows: nsis      macOS: app,dmg      Linux: deb,appimage
-```
-
-
-### Versioning
-
-The workspace shares a single version, defined in the root [`Cargo.toml`](./Cargo.toml) under `[workspace.package]`.
-
-
-## Code signing
-
-This program uses free code signing provided by [SignPath.io](https://signpath.io?utm_source=foundation&utm_medium=github&utm_campaign=0install), and a certificate by the [SignPath Foundation](https://signpath.org?utm_source=foundation&utm_medium=github&utm_campaign=0install). We thank them very much to their contributions to OSS software!
+Not affiliated with or endorsed by Polyfrost, and not affiliated with Mojang or
+Microsoft.

@@ -140,7 +140,6 @@ fn browse_target() -> Route {
 #[derive(PartialEq, Clone)]
 enum NavTarget {
     Route(Route),
-    External(&'static str),
 }
 
 #[derive(PartialEq)]
@@ -191,7 +190,6 @@ impl Component for NavLink {
                     NavTarget::Route(route) => {
                         let _ = RouterContext::get().push(route.clone());
                     }
-                    NavTarget::External(url) => crate::platform::open_url(url),
                 }
             })
             .on_pointer_over(move |_| hovering.set(true))

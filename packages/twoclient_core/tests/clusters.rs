@@ -121,3 +121,61 @@ async fn cleared_profile_fields_inherit_from_global() {
 	assert_eq!(resolved.mem_max, Some(8192));
 	assert_eq!(resolved.force_fullscreen, Some(false));
 }
+
+#[tokio::test]
+async fn names_are_unique_and_renameable() {
+	let state = twoclient_core::dev::ephemeral_state().await.unwrap();
+	let global = state.settings.read().global_game_settings.clone();
+
+	let first = state
+		.clusters
+		.create(
+			&global,
+			CreateClusterOptions::new("SkyBlock", "1.21.1", GameLoader::Fabric),
+		)
+		.await
+		.unwrap();
+
+	// Same name, and the case it is typed in must not get around the rule
+	for attempt in ["SkyBlock", "skyblock"] {
+		let clash = state
+			.clusters
+			.create(
+				&global,
+				CreateClusterOptions::new(attempt, "1.21.1", GameLoader::Fabric),
+			)
+			.await;
+		assert!(clash.is_err(), "{attempt} was allowed alongside SkyBlock");
+	}
+
+	// A different name on the same version and loader is a separate instance
+	let second = state
+		.clusters
+		.create(
+			&global,
+			CreateClusterOptions::new("SkyBlock Testing", "1.21.1", GameLoader::Fabric),
+		)
+		.await
+		.unwrap();
+	assert_ne!(first.id, second.id);
+	assert_ne!(first.folder_name, second.folder_name);
+
+	// Renaming onto a taken name is the same clash
+	assert!(state.clusters.rename(second.id, "SkyBlock").await.is_err());
+
+	// Renaming to what it is already called is not
+	let kept = state.clusters.rename(second.id, "SkyBlock Testing").await;
+	assert!(kept.is_ok(), "an instance may keep its own name");
+
+	let renamed = state.clusters.rename(second.id, "Vanilla Survival").await.unwrap();
+	assert_eq!(renamed.name, "Vanilla Survival");
+
+	// And the freed name is available again
+	assert!(
+		state
+			.clusters
+			.rename(first.id, "SkyBlock Testing")
+			.await
+			.is_ok()
+	);
+}

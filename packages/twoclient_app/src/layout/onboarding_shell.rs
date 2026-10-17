@@ -135,7 +135,9 @@ fn copyright() -> impl IntoElement {
         .interactive(false)
         .child(
             label()
-                .text("Design © 2026 Polyfrost. All rights reserved.")
+                // A GPL fork keeping "all rights reserved" over someone else's
+                // name claims both the wrong licence and the wrong author
+                .text("A fork of OneClient by Polyfrost. GPL-3.0.")
                 .font_size(11.)
                 .color(colors::fg_secondary()),
         )
