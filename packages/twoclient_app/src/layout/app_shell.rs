@@ -99,7 +99,7 @@ pub fn hides_overlay(route: &Route) -> bool {
     matches!(route, Route::Home {})
 }
 
-const DIALOG_BG: Color = Color::from_rgb(21, 28, 34);
+const DIALOG_BG: Color = Color::from_rgb(20, 27, 28);
 const CODE_BG: Color = Color::from_rgb(13, 18, 22);
 
 #[derive(PartialEq)]

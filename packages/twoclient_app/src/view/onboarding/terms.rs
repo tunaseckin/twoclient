@@ -16,7 +16,7 @@ use crate::theme::colors;
 use crate::ui::border_all_color;
 use crate::view::onboarding::{onboarding_illustration, onboarding_page, step_heading};
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 
 #[derive(Clone, Copy, PartialEq)]
 enum LegalTab {

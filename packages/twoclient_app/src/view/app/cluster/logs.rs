@@ -23,7 +23,7 @@ use crate::utils::format_size;
 
 use super::cluster_not_found;
 use crate::hooks::use_cluster;
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 const PICKER_ROW_H: f32 = 44.;
 const PICKER_ROW_SPACING: f32 = 2.;
 const PICKER_LIST_MAX_H: f32 = 300.;

@@ -26,7 +26,7 @@ const TILE_PREVIEW_H: f32 = 168.;
 const TILE_PREVIEW_RATIO: f32 = TILE_PREVIEW_H / MAX_COL_W;
 const TILE_PREVIEW_MAX_H: f32 = 420.;
 
-const CARD_BG: Color = Color::from_rgb(26, 34, 41);
+const CARD_BG: Color = Color::from_rgb(25, 33, 34);
 const CARD_NAME: Color = Color::from_rgb(213, 219, 255);
 
 #[derive(PartialEq)]
@@ -331,7 +331,7 @@ fn confirm_panel(
                         .spacing(14.)
                         .padding(Gaps::new_all(20.))
                         .corner_radius(CornerRadius::new_all(14.))
-                        .background(Color::from_rgb(26, 34, 41))
+                        .background(Color::from_rgb(25, 33, 34))
                         .border(border_all_color(1., colors::component_border()))
                         .child(
                             label()
