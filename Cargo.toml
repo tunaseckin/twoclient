@@ -9,12 +9,12 @@ authors = [
   "Polyfrost",
   "Polyfrost Contributors",
 ]
-documentation = "https://github.com/Polyfrost/TwoLauncher"
+documentation = "https://github.com/tunaseckin/twoclient"
 edition = "2024"
 homepage = "https://polyfrost.org/projects/twoclient"
 license = "GPL-3.0-only"
 readme = "README.md"
-repository = "https://github.com/Polyfrost/TwoLauncher"
+repository = "https://github.com/tunaseckin/twoclient"
 version = "2.3.1"
 
 [workspace.dependencies]
