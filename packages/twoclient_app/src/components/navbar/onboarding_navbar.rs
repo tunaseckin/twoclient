@@ -37,7 +37,7 @@ fn logo() -> impl IntoElement {
     // The old wordmark was an SVG of letter outlines, so it could not be
     // renamed; set in the app's own font instead
     label()
-        .text("TWOCLIENT")
+        .text("ONECLIENT")
         .font_family(theme::DEFAULT_FONT)
         .font_size(26.)
         .font_weight(FontWeight::BOLD)

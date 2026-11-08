@@ -4,6 +4,8 @@
 #![recursion_limit = "256"]
 
 mod assets;
+mod bedrock;
+mod edition;
 pub mod cli;
 mod components;
 pub mod hooks;

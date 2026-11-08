@@ -394,6 +394,7 @@ impl Component for OnboardingDownloading {
                 account_name,
                 migration_summary,
                 predownload_state,
+                selection.install_bedrock,
                 move |_| {
                     if let (Some(detection), Some(folder)) =
                         (import_detection.as_ref(), import_folder.peek().clone())
@@ -412,6 +413,10 @@ impl Component for OnboardingDownloading {
                             ImportTarget::Shared
                         };
                         import_dispatch.import_launcher(detection.source, folder, target);
+                    }
+
+                    if *selection.install_bedrock.peek() {
+                        crate::bedrock::start_install();
                     }
 
                     setup_started.set(true);

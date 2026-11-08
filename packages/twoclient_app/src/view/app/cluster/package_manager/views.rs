@@ -220,10 +220,10 @@ pub(super) fn toolbar_bar(
 pub(super) fn running_notice(noun_plural: &'static str, content_type: ContentType) -> Element {
     let text = match content_type {
         ContentType::ResourcePack => format!(
-            "Minecraft is running. New {noun_plural} usually go in right away, open Options → Resource Packs in game to turn them on. TwoClient tells you when one has to wait for the next launch."
+            "Minecraft is running. New {noun_plural} usually go in right away, open Options → Resource Packs in game to turn them on. OneClient tells you when one has to wait for the next launch."
         ),
         ContentType::Shader => format!(
-            "Minecraft is running. New {noun_plural} usually go in right away, open the shader pack screen in game to turn them on. TwoClient tells you when one has to wait for the next launch."
+            "Minecraft is running. New {noun_plural} usually go in right away, open the shader pack screen in game to turn them on. OneClient tells you when one has to wait for the next launch."
         ),
         _ => format!(
             "Minecraft is running. Changes to your {noun_plural} are saved, and take effect the next time you launch this version."

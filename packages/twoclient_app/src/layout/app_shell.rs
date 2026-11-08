@@ -36,6 +36,7 @@ impl Component for AppShell {
     fn render(&self) -> impl IntoElement {
         let active_cluster = use_state(|| None::<ClusterId>);
         use_provide_active_cluster(ActiveClusterState(active_cluster));
+        crate::edition::use_provide_edition();
 
         let browser_compat = use_state(|| true);
         use_provide_browser_compat(BrowserCompatState(browser_compat));
@@ -92,6 +93,7 @@ impl Component for AppShell {
                     .clone()
                     .map(|message| LaunchErrorDialog { message }.into_element()),
             )
+            .child(crate::edition::EditionTransition)
     }
 }
 

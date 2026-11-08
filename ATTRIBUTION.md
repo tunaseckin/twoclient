@@ -47,6 +47,10 @@ This includes, but may not be limited to, the following files:
 
 The following are libraries, projects, and codebases which we (Polyfrost and Contributors) copied or modified, with additional attribution inline (THIS IS A NON-EXHAUSTIVE LIST, IF WE ARE MISSING A LICENSE, PLEASE LEAVE A TICKET IN [our Discord server](https://polyfrost.org/discord)):
 
+## Bedrock mod
+
+The in-game Bedrock mod in `packages/bedrock_mod` carries icons and UI sounds from [OneConfig](https://github.com/Polyfrost/OneConfig), Copyright (C) 2021-2024 Polyfrost Inc. and contributors, licensed under the GNU Lesser General Public License, Version 3. Its build fetches [Dear ImGui](https://github.com/ocornut/imgui) (MIT) and [NanoSVG](https://github.com/memononen/nanosvg) (zlib), and it plays sounds through the FMOD library the game ships.
+
 ## [Gamemode]
 
 ```txt

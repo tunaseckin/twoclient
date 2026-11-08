@@ -1,4 +1,5 @@
 mod analytics;
+mod bedrock;
 mod clusters;
 mod debug;
 mod home;
@@ -34,6 +35,7 @@ pub fn launch_button_state(
 }
 
 pub(crate) use analytics::{analytics_body, analytics_placeholder};
+pub use bedrock::{Bedrock, BedrockBrowse, BedrockHome};
 pub use clusters::Clusters;
 pub use debug::Debug;
 pub use home::Home;

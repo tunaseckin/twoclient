@@ -10,7 +10,7 @@ use crate::layout::SettingsShell;
 use crate::view::{
     NotFound, Relocating, Startup,
     app::{
-        AccountSkins, Clusters, Debug, Home, Stats,
+        AccountSkins, Bedrock, BedrockBrowse, Clusters, Debug, Home, Stats,
         browser::{Browser, BrowserPackage},
         cluster::{
             ClusterLogs, ClusterMods, ClusterOverview, ClusterScreenshots, ClusterSettings,
@@ -90,6 +90,10 @@ pub enum Route {
             BrowserPackage { cluster_id: i64, package_type: String, package_id: String },
             #[route("/app/account/skins")]
             AccountSkins {},
+            #[route("/app/bedrock")]
+            Bedrock {},
+            #[route("/app/bedrock/browse")]
+            BedrockBrowse {},
             #[route("/app/stats")]
             Stats {},
             #[route("/app/debug")]
@@ -152,6 +156,8 @@ impl Route {
             Route::Browser { .. } => "Browser".to_string(),
             Route::BrowserPackage { .. } => "Browser".to_string(),
             Route::AccountSkins { .. } => "Skins".to_string(),
+            Route::Bedrock { .. } => "Bedrock".to_string(),
+            Route::BedrockBrowse { .. } => "Browse".to_string(),
             Route::Stats { .. } => "Statistics".to_string(),
             Route::Debug { .. } => "Debug".to_string(),
             Route::SettingsAppearance { .. } => "Settings".to_string(),

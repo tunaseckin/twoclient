@@ -93,7 +93,7 @@ impl Component for OnboardingLocation {
             .width(Size::fill())
             .spacing(16.)
             .child(step_heading(
-                "Where should TwoClient live?",
+                "Where should OneClient live?",
                 "All your data including mods, worlds and game settings gets stored here. This can be changed later from Settings.",
             ));
 
@@ -186,7 +186,7 @@ fn browse(
 ) {
     spawn(async move {
         let Some(handle) = rfd::AsyncFileDialog::new()
-            .set_title("Choose where TwoClient stores game data")
+            .set_title("Choose where OneClient stores game data")
             .pick_folder()
             .await
         else {

@@ -11,6 +11,7 @@ use crate::{
         settled_or_loading, try_default_account, use_active_cluster_id, use_clusters,
         use_current_account, use_dispatch, use_notifications_snapshot,
     },
+    edition::{Edition, use_edition},
     theme,
     utils::sort_clusters_for_home,
 };
@@ -72,17 +73,146 @@ fn navbar_left() -> impl IntoElement {
 fn navbar_logo() -> impl IntoElement {
     // The old wordmark was an SVG of letter outlines, so it could not be
     // renamed; set in the app's own font instead
-    label()
-        .text("TWOCLIENT")
-        .font_family(theme::DEFAULT_FONT)
-        .font_size(26.)
-        .font_weight(FontWeight::BOLD)
-        .color(theme::colors::fg_primary())
+    rect()
+        .horizontal()
+        .cross_align(Alignment::Center)
+        .spacing(10.)
+        .child(
+            label()
+                .text("ONECLIENT")
+                .font_family(theme::DEFAULT_FONT)
+                .font_size(26.)
+                .font_weight(FontWeight::BOLD)
+                .color(theme::colors::fg_primary()),
+        )
+        .child(EditionSwitcher)
+}
+
+/// "for Java" next to the wordmark, opening a menu to switch editions
+#[derive(PartialEq)]
+struct EditionSwitcher;
+
+impl Component for EditionSwitcher {
+    fn render(&self) -> impl IntoElement {
+        let edition = use_edition();
+        let current = *edition.current.read();
+        let mut open = use_state(|| false);
+        let mut hovering = use_state(|| false);
+        let menu = use_animation_with_dependencies(&open(), |conf, open| {
+            conf.on_change(OnChange::Rerun);
+            let (from, to) = if *open { (0., 1.) } else { (1., 0.) };
+            AnimNum::new(from, to).time(160).ease(Ease::Out).function(Function::Cubic)
+        });
+        let shown = menu.get().value();
+
+        let color = if hovering() || open() {
+            theme::colors::fg_primary()
+        } else {
+            theme::colors::fg_secondary()
+        };
+
+        let mut options = rect()
+            .vertical()
+            .width(Size::px(180.))
+            .padding(6.)
+            .spacing(2.)
+            .corner_radius(CornerRadius::new_all(12.))
+            .background(theme::colors::component_bg())
+            .border(crate::ui::border_all_color(1., theme::colors::component_border()));
+        for choice in Edition::ALL {
+            options = options.child(EditionOption {
+                edition: choice,
+                selected: choice == current,
+                on_pick: EventHandler::new(move |()| {
+                    open.set(false);
+                    edition.switch_to(choice);
+                }),
+            });
+        }
+
+        rect()
+            .horizontal()
+            .cross_align(Alignment::Center)
+            .spacing(4.)
+            .padding(Gaps::new(4., 0., 0., 0.))
+            .background(Color::RED.with_a(0))
+            .on_press(move |e: Event<PressEventData>| {
+                e.prevent_default();
+                open.toggle();
+            })
+            .on_pointer_over(move |_| hovering.set(true))
+            .on_pointer_out(move |_| hovering.set(false))
+            .child(
+                label()
+                    .text(format!("for {}", current.label()))
+                    .font_size(15.)
+                    .font_weight(FontWeight::MEDIUM)
+                    .color(color),
+            )
+            .child(Icon::new(IconType::ChevronDown).size(16.).color(color))
+            .maybe_child((shown > 0.01).then(|| {
+                rect()
+                    .position(Position::new_absolute().top(30.).left(-6.))
+                    .layer(Layer::OverlayLevel(3))
+                    .opacity(shown)
+                    .offset_y((1. - shown) * -6.)
+                    .child(options)
+                    .into_element()
+            }))
+    }
+}
+
+#[derive(PartialEq)]
+struct EditionOption {
+    edition: Edition,
+    selected: bool,
+    on_pick: EventHandler<()>,
+}
+
+impl Component for EditionOption {
+    fn render(&self) -> impl IntoElement {
+        let mut hovering = use_state(|| false);
+        let on_pick = self.on_pick.clone();
+        rect()
+            .horizontal()
+            .content(Content::Flex)
+            .cross_align(Alignment::Center)
+            .width(Size::fill())
+            .padding(Gaps::new_symmetric(8., 10.))
+            .corner_radius(CornerRadius::new_all(8.))
+            .background(if hovering() { theme::colors::component_bg_hover() } else { Color::TRANSPARENT })
+            .on_press(move |e: Event<PressEventData>| {
+                e.stop_propagation();
+                on_pick.call(());
+            })
+            .on_pointer_over(move |_| hovering.set(true))
+            .on_pointer_out(move |_| hovering.set(false))
+            .child(
+                label()
+                    .width(Size::flex(1.))
+                    .text(self.edition.label())
+                    .font_size(14.)
+                    .color(theme::colors::fg_primary()),
+            )
+            .maybe_child(self.selected.then(|| Icon::new(IconType::Check).size(16.).color(theme::colors::brand()).into_element()))
+    }
 }
 
 fn navbar_center() -> impl IntoElement {
     let route = use_route::<Route>();
     let browse_target = browse_target();
+    // Bedrock reuses the same tabs; its versions and instances live on the Bedrock page
+    let bedrock = *use_edition().current.read() == Edition::Bedrock;
+    let (versions_active, versions_target) = if bedrock {
+        (route == Route::Bedrock {}, Route::Bedrock {})
+    } else {
+        (route == Route::Clusters {}, Route::Clusters {})
+    };
+    let (browse_active, browse_target) = if bedrock {
+        (route == Route::BedrockBrowse {}, Route::BedrockBrowse {})
+    } else {
+        (matches!(route, Route::Browser { pick_cluster: true, .. }), browse_target)
+    };
 
     rect()
         .horizontal()
@@ -96,18 +226,12 @@ fn navbar_center() -> impl IntoElement {
             nav_label: "Home",
         })
         .child(NavLink {
-            active: route == Route::Clusters {},
-            target: NavTarget::Route(Route::Clusters {}),
+            active: versions_active,
+            target: NavTarget::Route(versions_target),
             nav_label: "Versions",
         })
         .child(NavLink {
-            active: matches!(
-                route,
-                Route::Browser {
-                    pick_cluster: true,
-                    ..
-                }
-            ),
+            active: browse_active,
             target: NavTarget::Route(browse_target),
             nav_label: "Browse",
         })

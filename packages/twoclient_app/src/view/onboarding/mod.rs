@@ -208,6 +208,24 @@ pub(crate) fn onboarding_nav_action(
 }
 
 pub(crate) fn predownload_toggle_row(predownload: State<bool>) -> impl IntoElement {
+    toggle_row(
+        "Download content now",
+        "Downloads Minecraft and your chosen mods now, so you can play as \
+         soon as setup finishes. Turn it off to download each version the \
+         first time you play it.",
+        predownload,
+    )
+}
+
+pub(crate) fn bedrock_toggle_row(install: State<bool>) -> impl IntoElement {
+    toggle_row(
+        "Install mcpelauncher to play Bedrock",
+        "You can also do this later from the Bedrock tab.",
+        install,
+    )
+}
+
+fn toggle_row(title: &'static str, body: &'static str, value: State<bool>) -> Element {
     rect()
         .horizontal()
         .width(Size::fill())
@@ -225,23 +243,19 @@ pub(crate) fn predownload_toggle_row(predownload: State<bool>) -> impl IntoEleme
                 .spacing(3.)
                 .child(
                     label()
-                        .text("Download content now")
+                        .text(title)
                         .font_size(14.)
                         .font_weight(FontWeight::MEDIUM)
                         .color(colors::fg_primary()),
                 )
                 .child(
                     label()
-                        .text(
-                            "Downloads Minecraft and your chosen mods now, so you can play as \
-                             soon as setup finishes. Turn it off to download each version the \
-                             first time you play it.",
-                        )
+                        .text(body)
                         .font_size(11.)
                         .color(colors::fg_secondary()),
                 ),
         )
-        .child(toggle(predownload))
+        .child(toggle(value))
         .into_element()
 }
 

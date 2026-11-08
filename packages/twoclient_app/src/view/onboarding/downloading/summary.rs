@@ -8,7 +8,9 @@ use crate::routes::Route;
 use crate::theme::colors;
 use crate::ui::border_all_color;
 use crate::utils::format_size;
-use crate::view::onboarding::{onboarding_illustration, predownload_toggle_row, step_heading};
+use crate::view::onboarding::{
+    bedrock_toggle_row, onboarding_illustration, predownload_toggle_row, step_heading,
+};
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn summary_view(
@@ -21,6 +23,7 @@ pub(super) fn summary_view(
     account_name: String,
     migration: Option<(String, String, String)>,
     predownload: State<bool>,
+    install_bedrock: State<bool>,
     on_setup: impl FnMut(Event<PressEventData>) + 'static,
 ) -> impl IntoElement {
     let version_rows: Vec<Element> = items
@@ -116,7 +119,17 @@ pub(super) fn summary_view(
                         version_rows
                     },
                 ))
-                .child(predownload_toggle_row(predownload)),
+                .child(
+                    rect()
+                        .vertical()
+                        .width(Size::fill())
+                        .spacing(8.)
+                        .child(predownload_toggle_row(predownload))
+                        .maybe_child(
+                            crate::bedrock::can_install()
+                                .then(|| bedrock_toggle_row(install_bedrock).into_element()),
+                        ),
+                ),
         );
 
     rect()

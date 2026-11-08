@@ -1318,7 +1318,7 @@ impl Actions {
                 tracing::error!("move skipped, launcher not ready: {err:#}");
                 self.write_relocation(RelocationState {
                     plan: Some(plan),
-                    result: Some(Err(format!("TwoClient is not ready yet: {err}"))),
+                    result: Some(Err(format!("OneClient is not ready yet: {err}"))),
                     ..RelocationState::default()
                 });
                 return;

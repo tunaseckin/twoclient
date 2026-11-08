@@ -2,6 +2,8 @@
 members = [
   "packages/*",
 ]
+# the in-game Bedrock mod is C++ built with the Android NDK
+exclude = ["packages/bedrock_mod"]
 resolver = "3"
 
 [workspace.package]

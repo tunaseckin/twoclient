@@ -8,6 +8,9 @@ pub struct Home;
 
 impl Component for Home {
     fn render(&self) -> impl IntoElement {
+        if *crate::edition::use_edition().current.read() == crate::edition::Edition::Bedrock {
+            return crate::view::app::BedrockHome.into_element();
+        }
         rect()
             .vertical()
             .width(Size::fill())
@@ -25,5 +28,6 @@ impl Component for Home {
                     .child(ActiveClusterPanel),
             )
             .child(RecentsRow)
+            .into_element()
     }
 }

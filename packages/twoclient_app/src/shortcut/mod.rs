@@ -62,7 +62,7 @@ pub fn launcher_exe() -> Result<PathBuf> {
         }
     }
 
-    let exe = std::env::current_exe().context("couldn't locate the TwoClient executable")?;
+    let exe = std::env::current_exe().context("couldn't locate the OneClient executable")?;
     Ok(dunce::canonicalize(&exe).unwrap_or(exe))
 }
 

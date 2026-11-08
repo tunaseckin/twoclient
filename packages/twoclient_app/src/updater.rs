@@ -15,7 +15,7 @@ enum UpdateAnswer {
 fn update_prompt(version: &str) -> Prompt<UpdateAnswer> {
     Prompt::new(
         "Update available",
-        format!("TwoClient {version} is ready to install. Download and install it now?"),
+        format!("OneClient {version} is ready to install. Download and install it now?"),
     )
     .option(
         Choice::primary(UPDATE_CHOICE_INSTALL, "Install"),
@@ -28,8 +28,18 @@ const PROGRESS_STEP: u64 = 256 * 1024;
 
 pub fn spawn_update_check(auto_install: bool, events: EventBus) {
     tokio::spawn(async move {
-        if let Err(err) = run_check(auto_install, events).await {
+        if let Err(err) = run_check(auto_install, events, false).await {
             tracing::warn!("update check failed: {err:#}");
+        }
+    });
+}
+
+/// The settings page's check, which says how it went even when there's nothing new
+pub fn spawn_manual_update_check(events: EventBus) {
+    tokio::spawn(async move {
+        if let Err(err) = run_check(false, events.clone(), true).await {
+            tracing::warn!("update check failed: {err:#}");
+            events.notify("Couldn't check for updates").body(format!("{err:#}")).error().send();
         }
     });
 }
@@ -55,7 +65,7 @@ async fn run_simulated_update() -> anyhow::Result<()> {
     }
 
     let progress_id = Uuid::new_v4();
-    let label = format!("Downloading TwoClient {FAKE_VERSION}");
+    let label = format!("Downloading OneClient {FAKE_VERSION}");
 
     let mut downloaded = 0u64;
     events.progress(progress_id, &label, downloaded, FAKE_TOTAL);
@@ -68,16 +78,19 @@ async fn run_simulated_update() -> anyhow::Result<()> {
     events.finish_progress(
         progress_id,
         "Finished Downloading",
-        format!("TwoClient {FAKE_VERSION} is ready. Restart to apply."),
+        format!("OneClient {FAKE_VERSION} is ready. Restart to apply."),
     );
 
     Ok(())
 }
 
-async fn run_check(auto_install: bool, events: EventBus) -> anyhow::Result<()> {
+async fn run_check(auto_install: bool, events: EventBus, report: bool) -> anyhow::Result<()> {
     // `check_update` performs a blocking HTTP request so offload it to a thread pool
     let Some(update) = tokio::task::spawn_blocking(check_for_update).await?? else {
         tracing::info!("no update available");
+        if report {
+            events.notify("OneClient is up to date").send();
+        }
         return Ok(());
     };
 
@@ -90,7 +103,7 @@ async fn run_check(auto_install: bool, events: EventBus) -> anyhow::Result<()> {
         events
             .notify("Update available")
             .body(format!(
-                "TwoClient {} is available. Download the latest package from {} to update.",
+                "OneClient {} is available. Download the latest package from {} to update.",
                 update.version, RELEASES_URL
             ))
             .send();
@@ -138,7 +151,7 @@ fn check_for_update() -> anyhow::Result<Option<Update>> {
 async fn download_and_install(update: Update, events: EventBus) -> anyhow::Result<()> {
     let progress_id = Uuid::new_v4();
     let version = update.version.clone();
-    let label = format!("Downloading TwoClient {version}");
+    let label = format!("Downloading OneClient {version}");
 
     events.progress(progress_id, &label, 0, 0);
 
@@ -172,7 +185,7 @@ async fn download_and_install(update: Update, events: EventBus) -> anyhow::Resul
         events.finish_progress(
             progress_id,
             "Finished Downloading",
-            format!("TwoClient {version} is ready. Restart to apply."),
+            format!("OneClient {version} is ready. Restart to apply."),
         );
         Ok(())
     })

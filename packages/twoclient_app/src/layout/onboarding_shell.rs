@@ -25,6 +25,7 @@ impl Component for OnboardingShell {
         let language = use_state(|| "English".to_string());
         let reduce_motion = use_state(|| false);
         let predownload = use_state(|| true);
+        let install_bedrock = use_state(|| false);
         let setup_started = use_state(|| false);
         let import_folder = use_state(|| None::<String>);
         let import_dedicated = use_state(|| false);
@@ -39,6 +40,7 @@ impl Component for OnboardingShell {
             language,
             reduce_motion,
             predownload,
+            install_bedrock,
             setup_started,
             import_folder,
             import_dedicated,

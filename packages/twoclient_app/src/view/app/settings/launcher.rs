@@ -67,7 +67,7 @@ impl Component for SettingsLauncher {
 
         // The only way back for someone who declined during onboarding
         let consent_summary = if settings.declined_tos {
-            "Declined. Poly+ and crash reporting stay off until you accept and restart TwoClient."
+            "Declined. Poly+ and crash reporting stay off until you accept and restart OneClient."
         } else {
             "Accepted. Review them again at any time."
         };
@@ -105,6 +105,20 @@ impl Component for SettingsLauncher {
                 "Start Maximized",
                 "Open the launcher window maximized. Applies on restart.",
                 toggle(start_maximized),
+            ))
+            .child(settings_row(
+                IconType::RefreshCw01,
+                "Updates",
+                "OneClient checks for updates on its own. Check now to look right away.",
+                Button::new()
+                    .secondary()
+                    .small()
+                    .on_press(|_| {
+                        if let Ok(state) = crate::launcher::state() {
+                            crate::updater::spawn_manual_update_check(state.services.events.clone());
+                        }
+                    })
+                    .text("Check for updates"),
             ))
             .child(settings_row(
                 IconType::File02,
@@ -235,7 +249,7 @@ fn plan(
         let picked = match source {
             Source::Picked => {
                 let mut dialog = rfd::AsyncFileDialog::new()
-                    .set_title("Choose where TwoClient should store game data");
+                    .set_title("Choose where OneClient should store game data");
 
                 if let Some(start) = twoclient_common::paths::picker_start_dir() {
                     dialog = dialog.set_directory(start);

@@ -107,6 +107,7 @@ pub struct OnboardingSelectionState {
     pub language: State<String>,
     pub reduce_motion: State<bool>,
     pub predownload: State<bool>,
+    pub install_bedrock: State<bool>,
     pub setup_started: State<bool>,
     /// `None` = don't import
     pub import_folder: State<Option<String>>,
