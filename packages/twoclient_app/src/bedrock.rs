@@ -339,9 +339,9 @@ fn client_command(install: &Install) -> Command {
             let mut cmd = Command::new("flatpak");
             cmd.args(["run", "--command=mcpelauncher-client"]);
             cmd.arg(format!("--env=QTWEBENGINE_CHROMIUM_FLAGS={WEBVIEW_FLAGS}"));
-            // the sandbox only sees its own folder unless instances are shared with it
-            if let Some(dir) = instances_dir() {
-                cmd.arg(format!("--filesystem={}", dir.display()));
+            // the sandbox only sees its own folder, so share ours: the mod and instances live there
+            if let Ok(dir) = twoclient_common::paths::data_dir() {
+                cmd.arg(format!("--filesystem={}", dir.join("bedrock").display()));
             }
             cmd.arg(FLATPAK_ID);
             cmd
