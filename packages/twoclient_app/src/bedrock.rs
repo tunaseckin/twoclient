@@ -291,7 +291,8 @@ fn run(cmd: &mut Command) -> Result<(), String> {
 }
 
 /// Starts the game itself, skipping mcpelauncher's own window when a version is ready
-pub fn play(found: &Bedrock) {
+pub fn play(_found: &Bedrock) {
+    let found = &detect();
     let Some(install) = &found.install else { return };
     let result = match (install, &found.version) {
         #[cfg(target_os = "windows")]
@@ -473,7 +474,9 @@ pub fn play_instance(found: &Bedrock, _instance: &Instance) {
 
 /// Starts the game on an instance's data, with its version if that is still installed
 #[cfg(not(target_os = "windows"))]
-pub fn play_instance(found: &Bedrock, instance: &Instance) {
+pub fn play_instance(_found: &Bedrock, instance: &Instance) {
+    // the page's copy goes stale when a version is downloaded while it's open
+    let found = &detect();
     let (Some(install), Some(root)) = (&found.install, &found.root) else { return };
     let version = instance
         .version
