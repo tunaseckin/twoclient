@@ -306,17 +306,32 @@ pub fn play(found: &Bedrock) {
     }
 }
 
+/// The Xbox sign-in opens in mcpelauncher's embedded Chromium, which claims passkey
+/// support it can't deliver, so Microsoft keeps offering a passkey prompt that never
+/// opens. Without WebAuthn it falls back to the password page.
+#[cfg(not(target_os = "windows"))]
+const WEBVIEW_FLAGS: &str = "--disable-blink-features=WebAuth";
+
 #[cfg(not(target_os = "windows"))]
 fn client_command(install: &Install) -> Command {
     match install {
         #[cfg(target_os = "macos")]
-        Install::MacApp(app) => Command::new(app.join("Contents/MacOS/mcpelauncher-client")),
+        Install::MacApp(app) => {
+            let mut cmd = Command::new(app.join("Contents/MacOS/mcpelauncher-client"));
+            cmd.env("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_FLAGS);
+            cmd
+        }
         #[cfg(target_os = "linux")]
-        Install::Binary(dir) => Command::new(dir.join("mcpelauncher-client")),
+        Install::Binary(dir) => {
+            let mut cmd = Command::new(dir.join("mcpelauncher-client"));
+            cmd.env("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_FLAGS);
+            cmd
+        }
         #[cfg(target_os = "linux")]
         Install::Flatpak => {
             let mut cmd = Command::new("flatpak");
             cmd.args(["run", "--command=mcpelauncher-client"]);
+            cmd.arg(format!("--env=QTWEBENGINE_CHROMIUM_FLAGS={WEBVIEW_FLAGS}"));
             // the sandbox only sees its own folder unless instances are shared with it
             if let Some(dir) = instances_dir() {
                 cmd.arg(format!("--filesystem={}", dir.display()));
