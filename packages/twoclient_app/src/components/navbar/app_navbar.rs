@@ -111,6 +111,7 @@ impl Component for EditionSwitcher {
             theme::colors::fg_secondary()
         };
 
+        let mut over_menu = use_state(|| false);
         let mut options = rect()
             .vertical()
             .width(Size::px(180.))
@@ -125,12 +126,15 @@ impl Component for EditionSwitcher {
                 selected: choice == current,
                 on_pick: EventHandler::new(move |()| {
                     open.set(false);
+                    over_menu.set(false);
                     edition.switch_to(choice);
                 }),
             });
         }
 
-        rect()
+        // The menu sits beside the button rather than inside it, so picking an option
+        // never reaches the button's toggle. A press anywhere else, or Escape, closes it.
+        let button = rect()
             .horizontal()
             .cross_align(Alignment::Center)
             .spacing(4.)
@@ -138,6 +142,7 @@ impl Component for EditionSwitcher {
             .background(Color::RED.with_a(0))
             .on_press(move |e: Event<PressEventData>| {
                 e.prevent_default();
+                e.stop_propagation();
                 open.toggle();
             })
             .on_pointer_over(move |_| hovering.set(true))
@@ -149,13 +154,28 @@ impl Component for EditionSwitcher {
                     .font_weight(FontWeight::MEDIUM)
                     .color(color),
             )
-            .child(Icon::new(IconType::ChevronDown).size(16.).color(color))
+            .child(Icon::new(IconType::ChevronDown).size(16.).color(color));
+
+        rect()
+            .on_global_pointer_press(move |_: Event<PointerEventData>| {
+                if !*hovering.peek() && !*over_menu.peek() {
+                    open.set_if_modified(false);
+                }
+            })
+            .on_global_key_down(move |e: Event<KeyboardEventData>| {
+                if e.key == Key::Named(NamedKey::Escape) {
+                    open.set_if_modified(false);
+                }
+            })
+            .child(button)
             .maybe_child((shown > 0.01).then(|| {
                 rect()
-                    .position(Position::new_absolute().top(30.).left(-6.))
+                    .position(Position::new_absolute().top(34.).left(-6.))
                     .layer(Layer::OverlayLevel(3))
                     .opacity(shown)
                     .offset_y((1. - shown) * -6.)
+                    .on_pointer_enter(move |_| over_menu.set(true))
+                    .on_pointer_leave(move |_| over_menu.set(false))
                     .child(options)
                     .into_element()
             }))
