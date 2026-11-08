@@ -333,6 +333,32 @@ fn header() -> Element {
                 .font_size(13.)
                 .color(colors::fg_secondary()),
         )
+        .maybe_child((!cfg!(target_os = "windows")).then(google_play_note))
+        .into_element()
+}
+
+const GOOGLE_PLAY_URL: &str = "https://play.google.com/store/apps/details?id=com.mojang.minecraftpe";
+
+/// Most Java players own Bedrock through Microsoft, which the Android build here can't use
+fn google_play_note() -> Element {
+    rect()
+        .horizontal()
+        .spacing(8.)
+        .cross_align(Alignment::Center)
+        .margin(Gaps::new(6., 0., 0., 0.))
+        .child(
+            label()
+                .text("Bedrock bought on a Microsoft account doesn't work here, macOS and Linux play the Android version.")
+                .font_size(12.)
+                .color(colors::fg_secondary()),
+        )
+        .child(
+            Button::new()
+                .secondary()
+                .small()
+                .on_press(|_| platform::open_url(GOOGLE_PLAY_URL))
+                .text("Get it on Google Play"),
+        )
         .into_element()
 }
 
@@ -495,9 +521,8 @@ impl Component for BedrockHome {
             .enabled(found.install.is_some())
             .on_press(move |_| {
                 match &to_play.1 {
-                    #[cfg(not(target_os = "windows"))]
                     Some(inst) => bedrock::play_instance(&to_play.0, inst),
-                    _ => bedrock::play(&to_play.0),
+                    None => bedrock::play(&to_play.0),
                 }
                 list.set(bedrock::instances());
             })
@@ -545,7 +570,6 @@ impl Component for BedrockHome {
                     .background(colors::component_bg())
                     .border(border_all_color(1., colors::component_border()))
                     .on_press(move |_| {
-                        #[cfg(not(target_os = "windows"))]
                         bedrock::play_instance(&to_play.0, &to_play.1);
                         list.set(bedrock::instances());
                     })

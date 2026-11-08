@@ -98,6 +98,7 @@ fn play_switch_sound(edition: Edition) {
     {
         use windows::Win32::Media::Audio::{PlaySoundA, SND_ASYNC, SND_MEMORY, SND_NODEFAULT};
         use windows::core::PCSTR;
+        let _ = name;
         // SND_MEMORY reads the WAV straight from the binary, which lives for the whole run
         unsafe {
             let _ = PlaySoundA(PCSTR(sound.as_ptr()), None, SND_MEMORY | SND_ASYNC | SND_NODEFAULT);

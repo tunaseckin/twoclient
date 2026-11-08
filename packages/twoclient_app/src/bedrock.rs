@@ -443,6 +443,12 @@ pub fn delete_instance(instance: &Instance) -> std::io::Result<()> {
     std::fs::remove_dir_all(&instance.dir)
 }
 
+/// Windows has one install and keeps its own data, so an instance just starts the game
+#[cfg(target_os = "windows")]
+pub fn play_instance(found: &Bedrock, _instance: &Instance) {
+    play(found);
+}
+
 /// Starts the game on an instance's data, with its version if that is still installed
 #[cfg(not(target_os = "windows"))]
 pub fn play_instance(found: &Bedrock, instance: &Instance) {
