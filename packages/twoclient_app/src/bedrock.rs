@@ -257,6 +257,13 @@ fn copy_app_from_dmg(dmg: &Path, dir: &Path) -> Result<(), String> {
 
 #[cfg(target_os = "linux")]
 async fn install() -> Result<(), String> {
+    // mcpelauncher's AppImages stopped in 2024, so flatpak is the only current build
+    if find_on_path("flatpak").is_none() {
+        return Err("Bedrock needs flatpak. Install it with your package manager \
+            (sudo apt install flatpak, sudo dnf install flatpak or sudo pacman -S flatpak), \
+            then press Install again"
+            .to_string());
+    }
     tokio::task::spawn_blocking(|| {
         run(Command::new("flatpak")
             .args(["remote-add", "--user", "--if-not-exists", "flathub", FLATHUB_REPO]))?;
