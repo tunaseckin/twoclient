@@ -27,6 +27,7 @@ add_library(twoclient_bedrock SHARED
         src/config.cpp
         src/ui.cpp
         src/pages.cpp
+        src/title.cpp
         src/gl.cpp
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -38,8 +39,10 @@ target_include_directories(twoclient_bedrock PRIVATE ${imgui_SOURCE_DIR} ${imgui
 # The game ships its own libc++_shared, so keep ours static and our symbols private
 # The name the in-game menu shows; a build for the fork passes -DCLIENT_NAME=TwoClient
 set(CLIENT_NAME "OneClient" CACHE STRING "Name the in-game menu shows")
+string(TOUPPER "${CLIENT_NAME}" CLIENT_NAME_UPPER)
 target_compile_definitions(twoclient_bedrock PRIVATE IMGUI_IMPL_OPENGL_ES3 IMGUI_DISABLE_DEMO_WINDOWS
         CLIENT_NAME="${CLIENT_NAME}"
+        CLIENT_NAME_UPPER="${CLIENT_NAME_UPPER}"
         FONT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../twoclient_app/assets/fonts/Poppins"
         ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
 target_compile_options(twoclient_bedrock PRIVATE -fvisibility=hidden)

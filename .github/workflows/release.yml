@@ -69,7 +69,7 @@ jobs:
           cmake -S packages/bedrock_mod -B packages/bedrock_mod/build/$OUT \
             -DCMAKE_TOOLCHAIN_FILE="$NDK/build/cmake/android.toolchain.cmake" \
             -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-28 -DANDROID_STL=c++_static \
-            -DCMAKE_BUILD_TYPE=Release -DCLIENT_NAME=TwoClient
+            -DCMAKE_BUILD_TYPE=Release
           cmake --build packages/bedrock_mod/build/$OUT -j4
 
       - name: Build

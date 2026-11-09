@@ -9,6 +9,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "config.h"
+#include "title.h"
 #include "ui.h"
 #include "mods.h"
 #include "shell.h"
@@ -48,6 +49,9 @@ float window_y(double y) { return float(y) - (menubar_height ? float(*menubar_he
 // progress and growing from 90% to full size around the middle
 constexpr float MAX_CLOSE_SECONDS = 0.16f, HIDDEN_SCALE = 0.9f;
 std::atomic<bool> shift_down{false};
+// The title screen the pack marks, and a click on one of the buttons the mod owns there
+std::atomic<bool> on_title{false};
+std::atomic<bool> title_click{false};
 float progress = 0;
 float tween_from = 0, tween_elapsed = 0;
 
@@ -139,6 +143,14 @@ bool key(int key, int action) {
 }
 
 bool mouse_button(double x, double y, int button, int action) {
+    if (!wanted && on_title && button == 1 && !relative_mouse) {
+        ImVec2 at(float(x), window_y(y));
+        if (title::owns(at, ImVec2(width, height))) {
+            if (action == BUTTON_PRESS)
+                title_click = true;
+            return true;
+        }
+    }
     if (!wanted)
         mods::on_mouse_button(button, action);
     if (!wanted || !ready)
@@ -159,6 +171,11 @@ bool mouse_button(double x, double y, int button, int action) {
 
 bool mouse_move(double x, double y, bool relative) {
     relative_mouse = relative;
+    if (!wanted && !relative) {
+        // tracked outside the menu too, for the title screen's hover
+        cursor_x = float(x);
+        cursor_y = window_y(y);
+    }
     if (!wanted)
         return false;
     if (relative) {
@@ -205,7 +222,8 @@ void frame(EGLDisplay display, EGLSurface surface) {
     bool menu_visible = shown || progress > 0;
     // HUDs belong to a world being played, not the title screen or other menus
     bool huds = mods::hud_visible() && (playing() || menu_visible);
-    if (!menu_visible && !huds)
+    on_title = !playing() && title::showing();
+    if (!menu_visible && !huds && !on_title)
         return;
 
     EGLint w = 0, h = 0;
@@ -239,6 +257,8 @@ void frame(EGLDisplay display, EGLSurface surface) {
     if (editing)
         mods::edit_hud(ImGui::GetForegroundDrawList(), scale, shell::hud_text(), shell::hud_small(), ui::col(ui::accent()));
     else {
+        if (on_title && !shown && title::draw(ImGui::GetBackgroundDrawList(), size, scale, ImVec2(cursor_x, cursor_y), title_click.exchange(false)))
+            wanted = true;
         if (huds)
             mods::draw_hud(ImGui::GetBackgroundDrawList(), scale, shell::hud_text(), shell::hud_small());
         close = menu_visible && shell::draw(size, scale);
