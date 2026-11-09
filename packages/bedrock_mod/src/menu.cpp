@@ -203,7 +203,9 @@ void frame(EGLDisplay display, EGLSurface surface) {
     }
     animate(dt);
     bool menu_visible = shown || progress > 0;
-    if (!menu_visible && !mods::hud_visible())
+    // HUDs belong to a world being played, not the title screen or other menus
+    bool huds = mods::hud_visible() && (playing() || menu_visible);
+    if (!menu_visible && !huds)
         return;
 
     EGLint w = 0, h = 0;
@@ -237,7 +239,7 @@ void frame(EGLDisplay display, EGLSurface surface) {
     if (editing)
         mods::edit_hud(ImGui::GetForegroundDrawList(), scale, shell::hud_text(), shell::hud_small(), ui::col(ui::accent()));
     else {
-        if (mods::hud_visible())
+        if (huds)
             mods::draw_hud(ImGui::GetBackgroundDrawList(), scale, shell::hud_text(), shell::hud_small());
         close = menu_visible && shell::draw(size, scale);
     }

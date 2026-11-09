@@ -1,0 +1,11 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "TwoClient",
+    "description": "TwoClient's menus",
+    "uuid": "d8bc380f-9942-45c8-9937-7edd61394dd7",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [{ "type": "resources", "uuid": "da5c851c-d59e-40cd-8e51-371e58f68fa8", "version": [1, 0, 0] }]
+}

@@ -1,0 +1,16 @@
+{
+  "namespace": "start",
+
+  // OneClient's glass buttons in place of the stone ones, white text throughout
+  "main_button@common_buttons.light_text_button": {
+    "size": [ "100% - 2px", "100% - 2px" ],
+    "$default_button_texture": "textures/ui/twoclient/button",
+    "$hover_button_texture": "textures/ui/twoclient/button_hover",
+    "$pressed_button_texture": "textures/ui/twoclient/button_pressed",
+    "$locked_button_texture": "textures/ui/twoclient/button",
+    "$default_text_color": [ 1, 1, 1 ],
+    "$hover_text_color": [ 1, 1, 1 ],
+    "$pressed_text_color": [ 1, 1, 1 ],
+    "$locked_text_color": [ 0.6, 0.6, 0.6 ]
+  }
+}
