@@ -2,7 +2,7 @@
 # light border over a dark see-through fill. Run it again after changing a color.
 import struct, zlib, json, os
 
-SIZE, RADIUS, SLICE = 32, 6, 8
+SIZE, RADIUS, SLICE = 48, 12, 16
 here = os.path.join(os.path.dirname(os.path.abspath(__file__)), "textures/ui/twoclient")
 
 def png(path, pixels):
@@ -39,6 +39,7 @@ def button(name, fill, border):
     with open(os.path.join(here, name + ".json"), "w") as f:
         json.dump({"nineslice_size": SLICE, "base_size": [SIZE, SIZE]}, f)
 
-button("button", (22, 25, 32, 150), (255, 255, 255, 70))
-button("button_hover", (60, 66, 80, 170), (255, 255, 255, 120))
-button("button_pressed", (40, 110, 255, 190), (120, 170, 255, 200))
+# OneClient's title screen buttons: a dim fill and a soft light outline
+button("button", (20, 18, 28, 120), (225, 228, 255, 125))
+button("button_hover", (45, 45, 62, 150), (235, 238, 255, 175))
+button("button_pressed", (35, 90, 230, 170), (140, 175, 255, 210))
