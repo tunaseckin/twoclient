@@ -1,0 +1,56 @@
+name: mcpelauncher
+
+# Builds mcpelauncher with its own upstream workflows and publishes it here, so
+# TwoClient can ship a version newer than Flathub or the upstream releases have.
+# Run it from the Actions tab with the upstream tag to build.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: mcpelauncher tag, like v1.8.7
+        required: true
+        default: v1.8.7
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  linux:
+    uses: minecraft-linux/appimage-builder/.github/workflows/main.yml@main
+    with:
+      mcpelauncher-ref: ${{ inputs.version }}
+      mcpelauncher-qt6-ref: ${{ inputs.version }}-qt6
+      mcpelauncher-ui-ref: ${{ inputs.version }}
+      mcpelauncher-ui-qt6-ref: ${{ inputs.version }}-qt6
+
+  macos:
+    uses: minecraft-linux/macos-builder/.github/workflows/main.yml@main
+    with:
+      mcpelauncher-ref: ${{ inputs.version }}
+      mcpelauncher-ui-ref: ${{ inputs.version }}
+      publish: false
+
+  publish:
+    needs: [linux, macos]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+      - name: Pick the files TwoClient uses
+        run: |
+          find out -type f | sort
+          mkdir dist
+          find out -name '*.AppImage' -path '*xenial-x86_64*' ! -name '*bookworm*' -exec cp {} dist/mcpelauncher-x86_64.AppImage \; -quit
+          find out -name '*.dmg' -exec cp {} dist/mcpelauncher-macos.dmg \; -quit
+          ls -l dist
+      # No v prefix, so the app's own release workflow stays out of it
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mcpelauncher-${{ inputs.version }}
+          name: mcpelauncher ${{ inputs.version }}
+          prerelease: true
+          files: dist/*
+          body: mcpelauncher ${{ inputs.version }} built from the upstream sources for TwoClient to ship.
