@@ -10,20 +10,19 @@ on:
         description: mcpelauncher tag, like v1.8.7
         required: true
         default: v1.8.7
-  # workflow_dispatch only works from the default branch, so editing VERSION builds too
+  # workflow_dispatch only works from the default branch, so editing this file builds too
   push:
     paths: [.github/workflows/mcpelauncher.yml]
-
-env:
-  VERSION: v1.8.7
 
 permissions:
   id-token: write
   contents: write
 
 jobs:
+  # Pinned, since these run with this repo's token. Its unused publish job asks for write-all
   linux:
-    uses: minecraft-linux/appimage-builder/.github/workflows/main.yml@main
+    permissions: write-all
+    uses: minecraft-linux/appimage-builder/.github/workflows/main.yml@a76d93707457a7d99f2d3485f050a65c69015fb1
     with:
       mcpelauncher-ref: ${{ inputs.version || 'v1.8.7' }}
       mcpelauncher-qt6-ref: ${{ inputs.version || 'v1.8.7' }}-qt6
@@ -31,7 +30,7 @@ jobs:
       mcpelauncher-ui-qt6-ref: ${{ inputs.version || 'v1.8.7' }}-qt6
 
   macos:
-    uses: minecraft-linux/macos-builder/.github/workflows/main.yml@main
+    uses: minecraft-linux/macos-builder/.github/workflows/main.yml@3b132e6594adf3d21a48a04cda6ab214830fd992
     with:
       mcpelauncher-ref: ${{ inputs.version || 'v1.8.7' }}
       mcpelauncher-ui-ref: ${{ inputs.version || 'v1.8.7' }}
