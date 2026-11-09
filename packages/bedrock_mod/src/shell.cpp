@@ -8,6 +8,7 @@
 
 #include "config.h"
 #include "icons.h"
+#include "mods.h"
 #include "pages.h"
 #include "ui.h"
 
@@ -135,8 +136,8 @@ void sidebar() {
     text_centered(fonts.brand, at(SIDEBAR_WIDTH / 2, y + 19.f / 2), col(accent()), CLIENT_NAME);
     y += 19 + 28;
 
-    // ponytail: Edit HUD only clicks until there is a HUD editor
-    nav_entry(0, "hud", "Edit HUD", y, false);
+    if (nav_entry(0, "hud", "Edit HUD", y, false))
+        mods::editing_hud = true;
     y += 33 + 18;
 
     int index = 1;

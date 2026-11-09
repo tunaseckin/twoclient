@@ -124,10 +124,15 @@ bool key(int key, int action) {
     // over other screens; the game only holds the mouse while nothing is open
     if (action == KEY_PRESS && key == int(config::get("key.menu")) && (wanted || playing())) {
         wanted = !wanted;
+        mods::editing_hud = false;
         return true;
     }
     if (wanted && action == KEY_PRESS && key == KEY_ESCAPE) {
-        wanted = false;
+        // Escape leaves the HUD editor for the menu, like OneConfig's
+        if (mods::editing_hud)
+            mods::editing_hud = false;
+        else
+            wanted = false;
         return true;
     }
     return wanted;
@@ -227,14 +232,22 @@ void frame(EGLDisplay display, EGLSurface surface) {
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui::NewFrame();
-    if (mods::hud_visible())
-        mods::draw_hud(ImGui::GetBackgroundDrawList(), scale, shell::hud_text(), shell::hud_small());
-    bool close = menu_visible && shell::draw(size, scale);
+    bool editing = shown && mods::editing_hud;
+    bool close = false;
+    if (editing)
+        mods::edit_hud(ImGui::GetForegroundDrawList(), scale, shell::hud_text(), shell::hud_small(), ui::col(ui::accent()));
+    else {
+        if (mods::hud_visible())
+            mods::draw_hud(ImGui::GetBackgroundDrawList(), scale, shell::hud_text(), shell::hud_small());
+        close = menu_visible && shell::draw(size, scale);
+    }
     ImGui::Render();
     transform(ImGui::GetDrawData());
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-    if (close)
+    if (close) {
         wanted = false;
+        mods::editing_hud = false;
+    }
 }
 
 }  // namespace menu

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <span>
 #include <string>
 #include <vector>
@@ -42,5 +43,9 @@ bool on_scroll(double dy, bool playing);
 void tick(float dt);
 bool hud_visible();
 void draw_hud(ImDrawList* dl, float scale, ImFont* text, ImFont* small);
+
+// Edit HUD: the menu steps aside and the HUDs can be dragged around
+extern std::atomic<bool> editing_hud;
+void edit_hud(ImDrawList* dl, float scale, ImFont* text, ImFont* small, ImU32 accent);
 
 }  // namespace mods

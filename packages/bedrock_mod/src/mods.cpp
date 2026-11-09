@@ -178,7 +178,23 @@ bool in_code(const std::vector<Segment>& segs, const void* p) {
 
 std::span<Mod> all() { return list; }
 
+// Where each HUD sits, as fractions of the screen, stacked down the top-left at first
+static const char* const HUDS[] = {"fps", "cps", "keystrokes"};
+constexpr int HUD_COUNT = 3;
+static ImVec2 hud_rects[HUD_COUNT][2];
+static int dragging = -1;
+
+std::atomic<bool> editing_hud{false};
+
+static void declare_positions() {
+    for (int i = 0; i < HUD_COUNT; i++) {
+        config::declare(std::string(HUDS[i]) + ".x", 0.005f);
+        config::declare(std::string(HUDS[i]) + ".y", 0.01f + 0.05f * i);
+    }
+}
+
 void declare() {
+    declare_positions();
     for (const Mod& mod : list) {
         config::declare(mod.key("enabled"), 0);
         config::declare(mod.key("favorite"), 0);
@@ -283,33 +299,59 @@ void tick(float dt) {
 
 bool hud_visible() { return enabled("keystrokes") || enabled("fps") || enabled("cps"); }
 
-void draw_hud(ImDrawList* dl, float s, ImFont* text, ImFont* small) {
-    // ponytail: fixed spots in the top-left until Edit HUD can move them
+// In the editor every HUD shows; the ones that are off are drawn faded
+static void draw_huds(ImDrawList* dl, float s, ImFont* text, ImFont* small, bool all) {
     const ImU32 fg = IM_COL32(255, 255, 255, 255);
-    float x = 8 * s, y = 8 * s;
-    auto label = [&](const char* str, float scale, bool background) {
+    ImVec2 display = ImGui::GetIO().DisplaySize;
+    float x = 0, y = 0;
+    // moves to a HUD's spot and remembers the box it ends up taking, for the editor
+    auto place = [&](int i) {
+        x = std::round(config::get(std::string(HUDS[i]) + ".x") * display.x);
+        y = std::round(config::get(std::string(HUDS[i]) + ".y") * display.y);
+        hud_rects[i][0] = ImVec2(x, y);
+    };
+    auto label = [&](int i, const char* str, float scale, bool background) {
+        place(i);
         float size = text->FontSize * scale, pad = 6 * s * scale;
         ImVec2 box = text->CalcTextSizeA(size, FLT_MAX, 0, str);
         if (background)
             dl->AddRectFilled(ImVec2(x, y), ImVec2(x + box.x + pad * 2, y + box.y + pad), IM_COL32(0, 0, 0, 120), 6 * s * scale);
         dl->AddText(text, size, ImVec2(std::round(x + pad), std::round(y + pad / 2)), fg, str);
-        y += box.y + pad + 4 * s;
+        hud_rects[i][1] = ImVec2(x + box.x + pad * 2, y + box.y + pad);
+    };
+    for (auto& rect : hud_rects)
+        rect[0] = rect[1] = ImVec2(-1, -1);
+    int start = 0;
+    auto begin = [&] { start = dl->VtxBuffer.Size; };
+    auto end = [&](const char* id) {
+        if (enabled(id))
+            return;
+        for (int v = start; v < dl->VtxBuffer.Size; v++) {
+            ImU32& c = dl->VtxBuffer[v].col;
+            c = (c & ~IM_COL32_A_MASK) | (ImU32((c >> IM_COL32_A_SHIFT & 0xFF) * 0.35f) << IM_COL32_A_SHIFT);
+        }
     };
 
     char buf[64];
-    if (enabled("fps")) {
+    if (all || enabled("fps")) {
+        begin();
         const char* formats[] = {"%d FPS", "FPS: %d", "%d"};
         std::snprintf(buf, sizeof buf, formats[std::clamp(int(config::get("fps.style")), 0, 2)], fps);
-        label(buf, config::get("fps.scale") / 100, config::on("fps.background"));
+        label(0, buf, config::get("fps.scale") / 100, config::on("fps.background"));
+        end("fps");
     }
-    if (enabled("cps")) {
+    if (all || enabled("cps")) {
+        begin();
         if (config::on("cps.right"))
             std::snprintf(buf, sizeof buf, "%zu | %zu CPS", cps[0], cps[1]);
         else
             std::snprintf(buf, sizeof buf, "%zu CPS", cps[0]);
-        label(buf, config::get("cps.scale") / 100, config::on("cps.background"));
+        label(1, buf, config::get("cps.scale") / 100, config::on("cps.background"));
+        end("cps");
     }
-    if (enabled("keystrokes")) {
+    if (all || enabled("keystrokes")) {
+        begin();
+        place(2);
         float scale = config::get("keystrokes.scale") / 100;
         ImU32 bg = IM_COL32(0, 0, 0, int(config::get("keystrokes.background") / 100 * 255));
         float k = 30 * s * scale, gap = 3 * s * scale, r = 6 * s * scale, font = small->FontSize * scale;
@@ -332,9 +374,127 @@ void draw_hud(ImDrawList* dl, float s, ImFont* text, ImFont* small) {
             key(wide + gap, y_next, wide, k, buttons[1], "RMB");
             y_next += row;
         }
-        if (config::on("keystrokes.space"))
+        if (config::on("keystrokes.space")) {
             key(0, y_next, 3 * k + 2 * gap, k / 2, keys[4], "");
+            y_next += k / 2 + gap;
+        }
+        hud_rects[2][1] = ImVec2(x + 3 * k + 2 * gap, y + y_next - gap);
+        end("keystrokes");
     }
+}
+
+void draw_hud(ImDrawList* dl, float s, ImFont* text, ImFont* small) { draw_huds(dl, s, text, small, false); }
+
+void edit_hud(ImDrawList* dl, float s, ImFont* text, ImFont* small, ImU32 accent) {
+    ImGuiIO& io = ImGui::GetIO();
+    ImVec2 display = io.DisplaySize;
+    dl->AddRectFilled(ImVec2(0, 0), display, IM_COL32(0, 0, 0, 110));
+    draw_huds(dl, s, text, small, true);
+
+    ImVec2 m = io.MousePos;
+    int hovered = -1;
+    for (int i = 0; i < HUD_COUNT; i++) {
+        ImVec2 a = hud_rects[i][0], b = hud_rects[i][1];
+        if (a.x < 0)
+            continue;
+        if (m.x >= a.x && m.x < b.x && m.y >= a.y && m.y < b.y)
+            hovered = i;
+    }
+    static ImVec2 pressed_at;
+    static bool moved = false;
+    // a corner handle resizes instead of moving, with the opposite corner held in place
+    static bool resizing = false;
+    static int corner = 0;
+    static float start_scale = 100, start_w = 1, start_h = 1;
+    static ImVec2 anchor;
+    auto handle_at = [&](int i) {
+        ImVec2 a = hud_rects[i][0], b = hud_rects[i][1];
+        float pad = 3 * s, grab = 8 * s;
+        ImVec2 cs[] = {{a.x - pad, a.y - pad}, {b.x + pad, a.y - pad}, {a.x - pad, b.y + pad}, {b.x + pad, b.y + pad}};
+        for (int c = 0; c < 4; c++)
+            if (std::abs(m.x - cs[c].x) < grab && std::abs(m.y - cs[c].y) < grab)
+                return c;
+        return -1;
+    };
+    if (io.MouseClicked[0]) {
+        resizing = false;
+        for (int i = 0; i < HUD_COUNT && hovered < 0; i++)
+            if (hud_rects[i][0].x >= 0 && handle_at(i) >= 0)
+                hovered = i;
+        dragging = hovered;
+        pressed_at = m;
+        moved = false;
+        if (dragging >= 0 && (corner = handle_at(dragging)) >= 0) {
+            resizing = true;
+            ImVec2 a = hud_rects[dragging][0], b = hud_rects[dragging][1];
+            start_scale = config::get(std::string(HUDS[dragging]) + ".scale");
+            start_w = std::max(b.x - a.x, 1.f);
+            start_h = std::max(b.y - a.y, 1.f);
+            anchor = ImVec2(corner & 1 ? a.x : b.x, corner & 2 ? a.y : b.y);
+        }
+    }
+    if (dragging >= 0 && std::abs(m.x - pressed_at.x) + std::abs(m.y - pressed_at.y) > 4 * s)
+        moved = true;
+    if (dragging >= 0 && io.MouseDown[0] && resizing) {
+        moved = true;
+        float w = std::abs(m.x - anchor.x);
+        float scale = std::clamp(std::round(start_scale * w / start_w / 5) * 5, 50.f, 200.f);
+        config::set(std::string(HUDS[dragging]) + ".scale", scale);
+        // keep the far corner where it was, so the HUD grows toward the cursor
+        float nw = start_w * scale / start_scale, nh = start_h * scale / start_scale;
+        float nx = corner & 1 ? anchor.x : anchor.x - nw, ny = corner & 2 ? anchor.y : anchor.y - nh;
+        config::set(std::string(HUDS[dragging]) + ".x", std::clamp(nx, 0.f, display.x) / display.x);
+        config::set(std::string(HUDS[dragging]) + ".y", std::clamp(ny, 0.f, display.y) / display.y);
+    } else if (dragging >= 0 && io.MouseDown[0]) {
+        // kept fully on screen, saved as fractions so it stays put across window sizes
+        ImVec2 a = hud_rects[dragging][0], b = hud_rects[dragging][1];
+        float nx = std::clamp(a.x + io.MouseDelta.x, 0.f, display.x - (b.x - a.x));
+        float ny = std::clamp(a.y + io.MouseDelta.y, 0.f, display.y - (b.y - a.y));
+        config::set(std::string(HUDS[dragging]) + ".x", nx / display.x);
+        config::set(std::string(HUDS[dragging]) + ".y", ny / display.y);
+    } else if (dragging >= 0) {
+        // a click that didn't drag turns the HUD on or off
+        if (!moved) {
+            std::string key = std::string(HUDS[dragging]) + ".enabled";
+            config::set(key, config::on(key) ? 0 : 1);
+        }
+        dragging = -1;
+        config::save();
+    }
+
+    for (int i = 0; i < HUD_COUNT; i++) {
+        ImVec2 a = hud_rects[i][0], b = hud_rects[i][1];
+        if (a.x < 0)
+            continue;
+        bool active = i == dragging || (dragging < 0 && i == hovered);
+        float pad = 3 * s;
+        ImVec2 o(a.x - pad, a.y - pad), p(b.x + pad, b.y + pad);
+        if (!active) {
+            dl->AddRect(o, p, IM_COL32(255, 255, 255, 70), 0, 0, s);
+            continue;
+        }
+        // OneConfig's selection: a thin accent box, square handles, the size above it
+        dl->AddRectFilled(o, p, (accent & ~IM_COL32_A_MASK) | IM_COL32(0, 0, 0, 30));
+        dl->AddRect(o, p, accent, 0, 0, s);
+        float h = 3 * s;
+        for (ImVec2 c : {o, ImVec2(p.x, o.y), ImVec2(o.x, p.y), p})
+            dl->AddRectFilled(ImVec2(c.x - h, c.y - h), ImVec2(c.x + h, c.y + h), IM_COL32(255, 255, 255, 255));
+        char dims[32];
+        std::snprintf(dims, sizeof dims, "%d x %d", int((b.x - a.x) / s), int((b.y - a.y) / s));
+        float fs = small->FontSize;
+        ImVec2 ts = small->CalcTextSizeA(fs, FLT_MAX, 0, dims);
+        ImVec2 l(o.x + (p.x - o.x - ts.x) / 2 - 6 * s, o.y - ts.y - 12 * s);
+        if (l.y < 0)
+            l.y = p.y + 6 * s;
+        dl->AddRectFilled(l, ImVec2(l.x + ts.x + 12 * s, l.y + ts.y + 6 * s), accent, 4 * s);
+        dl->AddText(small, fs, ImVec2(std::round(l.x + 6 * s), std::round(l.y + 3 * s)), IM_COL32(255, 255, 255, 255), dims);
+    }
+
+    const char* hint = "Drag a HUD to move it, click to turn it on or off. Esc goes back.";
+    ImVec2 size = text->CalcTextSizeA(text->FontSize, FLT_MAX, 0, hint);
+    ImVec2 at(std::round((display.x - size.x) / 2), std::round(display.y * 0.08f));
+    dl->AddRectFilled(ImVec2(at.x - 14 * s, at.y - 8 * s), ImVec2(at.x + size.x + 14 * s, at.y + size.y + 8 * s), IM_COL32(17, 20, 28, 230), 10 * s);
+    dl->AddText(text, text->FontSize, at, IM_COL32(255, 255, 255, 255), hint);
 }
 
 }  // namespace mods
