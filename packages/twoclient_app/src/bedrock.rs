@@ -299,7 +299,11 @@ pub fn play(_found: &Bedrock) {
         (Install::Windows, _) => open::that_detached("minecraft:"),
         #[cfg(not(target_os = "windows"))]
         (install, Some(version)) => {
-            let mut cmd = client_command(install);
+            let game = found.root.as_ref().map(|root| root.join("games/com.mojang"));
+            if let Some(game) = &game {
+                install_pack(game);
+            }
+            let mut cmd = client_command(install, game.as_deref());
             cmd.arg("-dg").arg(version);
             if let Some(mods) = bundled_mods_dir() {
                 cmd.arg("-m").arg(mods);
@@ -321,18 +325,26 @@ pub fn play(_found: &Bedrock) {
 const WEBVIEW_FLAGS: &str = "--disable-blink-features=WebAuth";
 
 #[cfg(not(target_os = "windows"))]
-fn client_command(install: &Install) -> Command {
+fn client_command(install: &Install, game: Option<&Path>) -> Command {
+    // the mod reads the game folder and the account's skin from these
+    let mut env: Vec<(&str, PathBuf)> = Vec::new();
+    if let Some(game) = game {
+        env.push(("TWOCLIENT_GAME_DIR", game.to_path_buf()));
+    }
+    if let Some(skin) = skin_file() {
+        env.push(("TWOCLIENT_SKIN", skin));
+    }
     match install {
         #[cfg(target_os = "macos")]
         Install::MacApp(app) => {
             let mut cmd = Command::new(app.join("Contents/MacOS/mcpelauncher-client"));
-            cmd.env("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_FLAGS);
+            cmd.env("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_FLAGS).envs(env);
             cmd
         }
         #[cfg(target_os = "linux")]
         Install::Binary(dir) => {
             let mut cmd = Command::new(dir.join("mcpelauncher-client"));
-            cmd.env("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_FLAGS);
+            cmd.env("QTWEBENGINE_CHROMIUM_FLAGS", WEBVIEW_FLAGS).envs(env);
             cmd
         }
         #[cfg(target_os = "linux")]
@@ -340,6 +352,9 @@ fn client_command(install: &Install) -> Command {
             let mut cmd = Command::new("flatpak");
             cmd.args(["run", "--command=mcpelauncher-client"]);
             cmd.arg(format!("--env=QTWEBENGINE_CHROMIUM_FLAGS={WEBVIEW_FLAGS}"));
+            for (key, value) in &env {
+                cmd.arg(format!("--env={key}={}", value.display()));
+            }
             // the sandbox only sees its own folder, so share ours: the mod and instances live there
             if let Ok(dir) = twoclient_common::paths::data_dir() {
                 cmd.arg(format!("--filesystem={}", dir.join("bedrock").display()));
@@ -403,6 +418,51 @@ impl Instance {
             dir,
         })
     }
+}
+
+// The resource pack that lays out the mod's title screen, from packages/bedrock_mod/pack
+const PACK_DIR: &str = "resource_packs/twoclient";
+const PACK: &[(&str, &[u8])] = &[
+    ("manifest.json", include_bytes!("../../bedrock_mod/pack/manifest.json")),
+    ("ui/start_screen.json", include_bytes!("../../bedrock_mod/pack/ui/start_screen.json")),
+    ("textures/ui/twoclient/clear.png", include_bytes!("../../bedrock_mod/pack/textures/ui/twoclient/clear.png")),
+    ("textures/ui/twoclient/white.png", include_bytes!("../../bedrock_mod/pack/textures/ui/twoclient/white.png")),
+];
+
+/// Puts the pack in a game folder and turns it on for every world
+#[cfg(not(target_os = "windows"))]
+fn install_pack(game: &Path) {
+    let written = PACK.iter().try_for_each(|(name, bytes)| {
+        let path = game.join(PACK_DIR).join(name);
+        std::fs::create_dir_all(path.parent().unwrap_or(game))?;
+        if std::fs::read(&path).ok().as_deref() != Some(*bytes) {
+            std::fs::write(&path, bytes)?;
+        }
+        Ok::<_, std::io::Error>(())
+    });
+    if let Err(err) = written {
+        tracing::warn!("couldn't put the title screen pack in place: {err}");
+    }
+    // global_resource_packs.json lists the packs on for everything; ours goes first
+    let manifest = String::from_utf8_lossy(PACK[0].1);
+    let uuid = manifest.split("\"uuid\"").nth(1).and_then(|rest| rest.split('"').nth(1)).unwrap_or_default();
+    let list = game.join("minecraftpe/global_resource_packs.json");
+    let current = std::fs::read_to_string(&list).unwrap_or_default();
+    if !uuid.is_empty() && !current.contains(uuid) {
+        let entry = format!(r#"{{"pack_id":"{uuid}","version":[1,0,0]}}"#);
+        let trimmed = current.trim();
+        let updated = match trimmed.strip_prefix('[') {
+            Some(rest) if rest.trim_start().starts_with(']') => format!("[{entry}]"),
+            Some(rest) => format!("[{entry},{rest}"),
+            None => format!("[{entry}]"),
+        };
+        let _ = std::fs::create_dir_all(list.parent().unwrap_or(game)).and_then(|_| std::fs::write(&list, updated));
+    }
+}
+
+/// The Java account's skin, which the mod's title screen draws
+pub fn skin_file() -> Option<PathBuf> {
+    twoclient_common::paths::data_dir().ok().map(|dir| dir.join("bedrock/skin.png"))
 }
 
 pub fn instances_dir() -> Option<PathBuf> {
@@ -487,7 +547,8 @@ pub fn play_instance(_found: &Bedrock, instance: &Instance) {
     let Some(version) = version else { return open_launcher(install) };
     let _ = std::fs::create_dir_all(instance.data_dir());
     share_sign_in(root, instance);
-    let mut cmd = client_command(install);
+    install_pack(&instance.data_dir());
+    let mut cmd = client_command(install, Some(&instance.data_dir()));
     cmd.arg("-dg").arg(version).arg("-dd").arg(instance.data_root());
     if let Some(mods) = bundled_mods_dir() {
         cmd.arg("-m").arg(mods);

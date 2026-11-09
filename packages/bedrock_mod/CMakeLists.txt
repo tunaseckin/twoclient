@@ -15,7 +15,11 @@ FetchContent_Declare(nanosvg
         GIT_TAG 239e102ec2c691f2902e20ace2ed36ee4a35cfe6
         # header-only here, so skip its own build
         SOURCE_SUBDIR none)
-FetchContent_MakeAvailable(imgui nanosvg)
+FetchContent_Declare(stb
+        GIT_REPOSITORY https://github.com/nothings/stb.git
+        GIT_TAG 4e9b368bfc071e97206ea5c6adba68dd0cbf8897
+        SOURCE_SUBDIR none)
+FetchContent_MakeAvailable(imgui nanosvg stb)
 
 add_library(twoclient_bedrock SHARED
         src/main.cpp
@@ -28,6 +32,7 @@ add_library(twoclient_bedrock SHARED
         src/ui.cpp
         src/pages.cpp
         src/title.cpp
+        src/quickplay.cpp
         src/gl.cpp
         ${imgui_SOURCE_DIR}/imgui.cpp
         ${imgui_SOURCE_DIR}/imgui_draw.cpp
@@ -35,7 +40,7 @@ add_library(twoclient_bedrock SHARED
         ${imgui_SOURCE_DIR}/imgui_widgets.cpp
         ${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.cpp)
 
-target_include_directories(twoclient_bedrock PRIVATE ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${nanosvg_SOURCE_DIR}/src)
+target_include_directories(twoclient_bedrock PRIVATE ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends ${nanosvg_SOURCE_DIR}/src ${stb_SOURCE_DIR})
 # The game ships its own libc++_shared, so keep ours static and our symbols private
 # The name the in-game menu shows; a build for the fork passes -DCLIENT_NAME=TwoClient
 set(CLIENT_NAME "OneClient" CACHE STRING "Name the in-game menu shows")

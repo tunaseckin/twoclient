@@ -48,6 +48,7 @@ extern "C" [[gnu::visibility("default")]] void mod_init() {
     // every setting is declared before the file is read, and before input starts
     mods::declare();
     pages::declare();
+    config::declare("pref.title_light", 0);
     config::load();
     mods::install_zoom();
     void* gw = dlopen("libmcpelauncher_gamewindow.so", 0);

@@ -14,6 +14,13 @@ bool showing();
 // Draws the screen. Returns true when the menu should open.
 bool draw(ImDrawList* dl, ImVec2 display, float scale, ImVec2 mouse, bool clicked);
 
+// The light or dark look the title screen buttons share
+struct Look {
+    ImU32 fill, border, text, dim;
+};
+bool light();
+Look look(bool hover);
+
 // Whether a click at this point lands on a button only the mod handles
 bool owns(ImVec2 point, ImVec2 display);
 

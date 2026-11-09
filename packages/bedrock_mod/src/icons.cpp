@@ -15,6 +15,7 @@
 
 #define ICON(name, file) EMBED(icon_##name, ASSET_DIR "/ico/" file ".svg")
 ICON(bell, "bell")
+ICON(logo, "logo")
 ICON(close, "close")
 ICON(cog, "cog")
 ICON(eye_off, "eye-off")
@@ -50,6 +51,7 @@ namespace {
 
 const std::map<std::string, Asset> files = {
         {"bell", ASSET(icon_bell)},
+        {"logo", ASSET(icon_logo)},
         {"close", ASSET(icon_close)},
         {"cog", ASSET(icon_cog)},
         {"eye-off", ASSET(icon_eye_off)},

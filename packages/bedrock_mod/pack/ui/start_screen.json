@@ -9,7 +9,7 @@
      "bindings": [
       {
        "binding_type": "view",
-       "source_control_name": "twoclient_vanilla",
+       "source_control_name": "twoclient_to_vanilla",
        "source_property_name": "(not #toggle_state)",
        "target_property_name": "#visible"
       }
@@ -30,6 +30,32 @@
         ],
         "anchor_from": "top_left",
         "anchor_to": "top_left",
+        "offset": [
+         "0%",
+         "0%"
+        ],
+        "layer": 100
+       }
+      },
+      {
+       "twoclient_mark_middle": {
+        "type": "image",
+        "texture": "textures/ui/twoclient/white",
+        "color": [
+         0.00392156862745098,
+         0.996078431372549,
+         0.00784313725490196
+        ],
+        "size": [
+         2,
+         2
+        ],
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "offset": [
+         "50%",
+         "56%"
+        ],
         "layer": 100
        }
       },
@@ -164,12 +190,12 @@
         "anchor_from": "top_left",
         "anchor_to": "top_left",
         "size": [
-         "24.00%",
+         "3.40%",
          "5.50%"
         ],
         "offset": [
-         "72.50%",
-         "67.00%"
+         "90.80%",
+         "2.50%"
         ],
         "$pressed_button_name": "button.menu_inbox",
         "$button_text": "",
@@ -178,6 +204,139 @@
         "$pressed_button_texture": "textures/ui/twoclient/clear",
         "$locked_button_texture": "textures/ui/twoclient/clear",
         "$border_visible": false
+       }
+      },
+      {
+       "twoclient_quit@common_buttons.light_text_button": {
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "size": [
+         "3.40%",
+         "5.50%"
+        ],
+        "offset": [
+         "95.20%",
+         "2.50%"
+        ],
+        "$pressed_button_name": "button.menu_exit",
+        "$button_text": "",
+        "$default_button_texture": "textures/ui/twoclient/clear",
+        "$hover_button_texture": "textures/ui/twoclient/clear",
+        "$pressed_button_texture": "textures/ui/twoclient/clear",
+        "$locked_button_texture": "textures/ui/twoclient/clear",
+        "$border_visible": false
+       }
+      },
+      {
+       "twoclient_recent_1@common_buttons.light_text_button": {
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "size": [
+         "24.00%",
+         "8.00%"
+        ],
+        "offset": [
+         "3.50%",
+         "42.50%"
+        ],
+        "$pressed_button_name": "button.menu_play",
+        "$button_text": "",
+        "$default_button_texture": "textures/ui/twoclient/clear",
+        "$hover_button_texture": "textures/ui/twoclient/clear",
+        "$pressed_button_texture": "textures/ui/twoclient/clear",
+        "$locked_button_texture": "textures/ui/twoclient/clear",
+        "$border_visible": false
+       }
+      },
+      {
+       "twoclient_recent_2@common_buttons.light_text_button": {
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "size": [
+         "24.00%",
+         "8.00%"
+        ],
+        "offset": [
+         "3.50%",
+         "52.00%"
+        ],
+        "$pressed_button_name": "button.menu_play",
+        "$button_text": "",
+        "$default_button_texture": "textures/ui/twoclient/clear",
+        "$hover_button_texture": "textures/ui/twoclient/clear",
+        "$pressed_button_texture": "textures/ui/twoclient/clear",
+        "$locked_button_texture": "textures/ui/twoclient/clear",
+        "$border_visible": false
+       }
+      },
+      {
+       "twoclient_recent_3@common_buttons.light_text_button": {
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "size": [
+         "24.00%",
+         "8.00%"
+        ],
+        "offset": [
+         "3.50%",
+         "61.50%"
+        ],
+        "$pressed_button_name": "button.menu_play",
+        "$button_text": "",
+        "$default_button_texture": "textures/ui/twoclient/clear",
+        "$hover_button_texture": "textures/ui/twoclient/clear",
+        "$pressed_button_texture": "textures/ui/twoclient/clear",
+        "$locked_button_texture": "textures/ui/twoclient/clear",
+        "$border_visible": false
+       }
+      },
+      {
+       "twoclient_to_vanilla": {
+        "type": "toggle",
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
+        "size": [
+         "3.40%",
+         "5.50%"
+        ],
+        "offset": [
+         "82.00%",
+         "2.50%"
+        ],
+        "layer": 50,
+        "radio_toggle_group": true,
+        "toggle_name": "twoclient_screen",
+        "toggle_group_forced_index": 1,
+        "toggle_group_default_selected": 0,
+        "toggle_default_state": false,
+        "checked_control": "on",
+        "unchecked_control": "off",
+        "checked_hover_control": "on",
+        "unchecked_hover_control": "off",
+        "controls": [
+         {
+          "on": {
+           "type": "panel"
+          }
+         },
+         {
+          "off": {
+           "type": "panel"
+          }
+         }
+        ],
+        "button_mappings": [
+         {
+          "from_button_id": "button.menu_select",
+          "to_button_id": "button.menu_select",
+          "mapping_type": "pressed"
+         },
+         {
+          "from_button_id": "button.menu_ok",
+          "to_button_id": "button.menu_ok",
+          "mapping_type": "focused"
+         }
+        ]
        }
       }
      ]
@@ -189,7 +348,7 @@
      "bindings": [
       {
        "binding_type": "view",
-       "source_control_name": "twoclient_vanilla",
+       "source_control_name": "twoclient_to_vanilla",
        "source_property_name": "#toggle_state",
        "target_property_name": "#visible"
       }
@@ -284,37 +443,60 @@
         ],
         "anchor_from": "top_left",
         "anchor_to": "top_left",
+        "offset": [
+         "0%",
+         "0%"
+        ],
         "layer": 100
        }
-      }
-     ]
-    }
-   },
-   {
-    "twoclient_vanilla_toggle_panel": {
-     "type": "panel",
-     "anchor_from": "top_left",
-     "anchor_to": "top_left",
-     "size": [
-      "11.00%",
-      "5.20%"
-     ],
-     "offset": [
-      "1.20%",
-      "3.50%"
-     ],
-     "layer": 50,
-     "alpha": 0,
-     "propagate_alpha": true,
-     "controls": [
+      },
       {
-       "twoclient_vanilla_toggle@common_toggles.light_text_toggle": {
+       "twoclient_to_oneclient": {
+        "type": "toggle",
+        "anchor_from": "top_left",
+        "anchor_to": "top_left",
         "size": [
-         "100%",
-         "100%"
+         "3.40%",
+         "5.50%"
         ],
-        "$toggle_view_binding_name": "twoclient_vanilla",
-        "$button_text": ""
+        "offset": [
+         "95.20%",
+         "2.50%"
+        ],
+        "layer": 50,
+        "radio_toggle_group": true,
+        "toggle_name": "twoclient_screen",
+        "toggle_group_forced_index": 0,
+        "toggle_group_default_selected": 0,
+        "toggle_default_state": true,
+        "checked_control": "on",
+        "unchecked_control": "off",
+        "checked_hover_control": "on",
+        "unchecked_hover_control": "off",
+        "controls": [
+         {
+          "on": {
+           "type": "panel"
+          }
+         },
+         {
+          "off": {
+           "type": "panel"
+          }
+         }
+        ],
+        "button_mappings": [
+         {
+          "from_button_id": "button.menu_select",
+          "to_button_id": "button.menu_select",
+          "mapping_type": "pressed"
+         },
+         {
+          "from_button_id": "button.menu_ok",
+          "to_button_id": "button.menu_ok",
+          "mapping_type": "focused"
+         }
+        ]
        }
       }
      ]

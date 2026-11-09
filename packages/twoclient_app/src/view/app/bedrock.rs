@@ -38,8 +38,13 @@ impl Component for Bedrock {
             installing.set(true);
         };
 
+        // the in-game title screen shows the Java account's skin
+        let account = crate::hooks::use_current_account();
+        let skin_export = crate::hooks::try_default_account(&account).map(|account| SkinExport { uuid: account.id.to_string() });
+
         let page = rect()
             .vertical()
+            .maybe_child(skin_export)
             .width(Size::fill())
             .padding(Gaps::new(0., 40., 40., 40.))
             .spacing(24.)
@@ -610,5 +615,23 @@ impl Component for BedrockBrowse {
                     .font_weight(FontWeight::MEDIUM)
                     .color(colors::fg_secondary()),
             )
+    }
+}
+
+/// Leaves the account's skin where the game's mod looks for it
+#[derive(PartialEq)]
+struct SkinExport {
+    uuid: String,
+}
+
+impl Component for SkinExport {
+    fn render(&self) -> impl IntoElement {
+        let (bytes, _slim) = crate::hooks::use_player_skin(self.uuid.clone());
+        if let Some(path) = bedrock::skin_file()
+            && std::fs::read(&path).ok().as_deref() != Some(&bytes[..])
+        {
+            let _ = std::fs::create_dir_all(path.parent().unwrap_or(&path)).and_then(|_| std::fs::write(&path, &bytes));
+        }
+        rect()
     }
 }
