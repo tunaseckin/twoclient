@@ -94,7 +94,6 @@ icons = [
   "icons/icon.ico",
 ]
 resources = [
-  { src = "icons/generated/Assets.car", target = "Assets.car" },
   # >>> CRT_RESOURCES >>>
   # <<< CRT_RESOURCES <<<
 ]

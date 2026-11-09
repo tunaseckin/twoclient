@@ -38,6 +38,16 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
+      # The updater compares this against latest.json, so it has to be the tag
+      - name: Version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: perl -pi -e 's/^version = ".*"/version = "$ENV{GITHUB_REF_NAME}"/ and s/"v/"/ if $.<30' Cargo.toml
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-packager@0.11.8
+
       - name: Install Linux build dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
@@ -46,7 +56,7 @@ jobs:
             build-essential cmake pkg-config clang python3 \
             libfontconfig-dev libfreetype-dev \
             libgl1-mesa-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev \
-            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libdbus-1-dev
+            libxkbcommon-dev libxkbcommon-x11-dev libwayland-dev libdbus-1-dev libfuse2
 
       # The in-game mod for mcpelauncher, which the app carries on macOS and Linux.
       # GitHub's macOS and Ubuntu images come with the Android NDK
@@ -76,6 +86,7 @@ jobs:
             .github/Info.plist.template > "$APP/Contents/Info.plist"
           codesign --force --deep --sign - "$APP"
           cd dist && zip -qry "${{ matrix.artifact }}.zip" TwoClient.app
+          tar czf TwoClient-macos-arm64.app.tar.gz TwoClient.app
 
       - name: Package (Windows)
         if: matrix.os == 'windows-latest'
@@ -84,6 +95,8 @@ jobs:
           mkdir -p dist
           cp target/${{ matrix.target }}/release/twoclient_app.exe dist/TwoClient.exe
           cd dist && 7z a "${{ matrix.artifact }}.zip" TwoClient.exe
+          cd .. && cargo packager -p twoclient_app --release --target ${{ matrix.target }} --formats nsis -q
+          cp target/${{ matrix.target }}/release/*-setup.exe dist/TwoClient-windows-x86_64-setup.exe
 
       - name: Package (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -91,6 +104,20 @@ jobs:
           mkdir -p dist
           cp target/${{ matrix.target }}/release/twoclient_app dist/TwoClient
           cd dist && tar czf "${{ matrix.artifact }}.tar.gz" TwoClient
+          cd .. && cargo packager -p twoclient_app --release --target ${{ matrix.target }} --formats appimage -q
+          cp target/${{ matrix.target }}/release/*.AppImage dist/TwoClient-linux-x86_64.AppImage
+
+      # Signs what the in-app updater downloads
+      - name: Sign update
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY }}
+          CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD: ${{ secrets.CARGO_PACKAGER_SIGN_PRIVATE_KEY_PASSWORD }}
+        run: |
+          for f in dist/*.app.tar.gz dist/*-setup.exe dist/*.AppImage; do
+            [ -e "$f" ] && cargo packager signer sign "$f" -q
+          done
 
       - uses: actions/upload-artifact@v4
         with:
@@ -98,6 +125,9 @@ jobs:
           path: |
             dist/*.zip
             dist/*.tar.gz
+            dist/*-setup.exe
+            dist/*.AppImage
+            dist/*.sig
 
   release:
     needs: build
@@ -109,15 +139,43 @@ jobs:
           path: dist
           merge-multiple: true
 
+      - name: Write latest.json
+        run: |
+          python3 - <<'PY'
+          import json, os, datetime
+          tag = os.environ["GITHUB_REF_NAME"]
+          base = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{tag}/"
+          files = {
+              "macos-aarch64": ("TwoClient-macos-arm64.app.tar.gz", "app"),
+              "windows-x86_64": ("TwoClient-windows-x86_64-setup.exe", "nsis"),
+              "linux-x86_64": ("TwoClient-linux-x86_64.AppImage", "appimage"),
+          }
+          platforms = {
+              key: {"url": base + name, "signature": open(f"dist/{name}.sig").read(), "format": fmt}
+              for key, (name, fmt) in files.items()
+          }
+          json.dump({
+              "version": tag.removeprefix("v"),
+              "pub_date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+              "platforms": platforms,
+          }, open("dist/latest.json", "w"), indent=2)
+          PY
+
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             dist/*.zip
             dist/*.tar.gz
+            dist/*-setup.exe
+            dist/*.AppImage
+            dist/*.sig
+            dist/latest.json
           body: |
             Unsigned builds. macOS and Windows will both warn on first run.
 
             macOS: unzip, move TwoClient.app to Applications, then right-click
             it and choose Open the first time.
 
-            Linux: untar and run ./TwoClient.
+            Linux: run the AppImage (it updates itself) or untar and run ./TwoClient.
+
+            Windows: the setup.exe installs it and keeps it updated.
